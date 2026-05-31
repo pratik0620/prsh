@@ -12,7 +12,7 @@ void buildArgs(std::string tokens[], int token_count, char* args[]) {
     args[token_count] = nullptr;
 }
 
-int tokenize(std::string &user_input, std::string tokens[]) {
+int tokenize(const std::string &user_input, std::string tokens[]) {
     std::string current_token;
     int i=0, token_count=0;
     while(i < user_input.size()) {
@@ -56,11 +56,11 @@ bool executeBuiltin(char* args[]) {
     if(strcmp(args[0], "exit") == 0) {
         exit(0);
     } else if (strcmp(args[0], "cd") == 0) {
-        if(args[1] == nullptr) {
-            return true;
+        if(args[1] == nullptr || strcmp(args[1], "~") == 0) {
+            chdir(getenv("HOME"));
         } else {
             if(chdir(args[1]) != 0) {
-                std::cout << "Failed to change directory" << std::endl;
+                perror("cd");
             }
         }
         return true; 
