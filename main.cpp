@@ -1,10 +1,15 @@
 #include<iostream>
 #include<string>
 #include<cstring>
+#include<unistd.h>
+#include<sys/wait.h>
 
 int main() {
     while(true) {
-        std::cout << "prsh>" << std::flush;
+        char buffer[1024];
+        getcwd(buffer, sizeof(buffer));
+
+        std::cout << "prsh " << buffer << ">" << std::flush;
         std::string user_input;
         std::getline(std::cin, user_input);
         if(user_input.empty()) continue;
@@ -33,11 +38,41 @@ int main() {
 
         char *args[100];
 
-        for(size_t k=0; k<j; ++k) {
-            args[k] = new char[tokens[k].length() + 1];
-            std::strcpy(args[k], tokens[k].c_str());
+        if(tokens[0] == "exit") break;
+        else if (tokens[0] == "cd") {
+            for(size_t k=0; k<j; ++k) {
+                args[k] = new char[tokens[k].length() + 1];
+                std::strcpy(args[k], tokens[k].c_str());
+            }
+            args[j] = nullptr;
+
+            if(j < 2) {
+                std::cout << "Usage: cd <directory>\n";
+            } else {
+                if(chdir(args[1]) == 0) {
+                } else {
+                    std::cout << "Failed to change directory" << std::endl;
+                }
+            }    
+        } else {
+            for(size_t k=0; k<j; ++k) {
+                args[k] = new char[tokens[k].length() + 1];
+                std::strcpy(args[k], tokens[k].c_str());
+            }
+            args[j] = nullptr;
+
+            pid_t pid = fork();
+
+            if(pid == 0) {
+                execvp(args[0], args);
+                perror("execvp failed");
+                exit(1);
+            } else if (pid > 0) {
+                wait(NULL);
+            } else {
+                perror("Fork Failed");
+            }
         }
-        args[j] = nullptr;
 
         for(size_t k=0; k<j; ++k) {
             delete[] args[k];
