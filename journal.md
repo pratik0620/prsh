@@ -65,3 +65,50 @@
 - Learn dup2()
 - Understand how two child processes communicate through a pipe
 - Implement executePipe() for a single pipe
+
+## Day 6 - 10 June 2026
+
+### Progress
+
+- Implemented executePipe()
+- Added support for single-command pipelines
+- Connected stdout of one process to stdin of another using dup2()
+- Added error handling for pipe(), fork(), execvp(), and dup2()
+
+### Learned
+
+#### File Descriptors (stdin - 0, stdout - 1, stderr - 2)
+
+- 0 (stdin) – Standard Input (usually keyboard)
+- 1 (stdout) – Standard Output (usually terminal screen)
+- 2 (stderr) – Standard Error (used for error messages)
+- Commands read from stdin and write to stdout by default.
+
+#### Pipe
+
+A pipe is an IPC (Inter-Process Communication) mechanism that allows data to flow from one process to another.
+
+- pipe() creates a unidirectional communication channel between processes.
+
+- A pipe has two ends:\
+  fd[0] ---> Read End\
+  fd[1] ---> Write End\
+
+- Data written to fd[1] can be read from fd[0].
+
+#### dup2()
+
+- dup2(oldfd, newfd) redirects a file descriptor.
+- Used to replace stdin or stdout with a pipe endpoint.
+- It connects a process stdin/stdout to pipe endpoints.
+
+#### How a shell pipeline works
+
+1. Create a pipe
+2. Fork first child
+3. Redirect stdout to pipe write end
+4. Execute left command
+5. Fork second child
+6. Redirect stdin to pipe read end
+7. Execute right command
+8. Parent waits for both children

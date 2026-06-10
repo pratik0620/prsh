@@ -3,8 +3,13 @@
 #include<string>
 #include<cstring>
 
+#include<cstdlib>
+
 #include<unistd.h>
 #include<sys/wait.h>
+
+constexpr int MAX_ARGS = 100;
+constexpr int MAX_PATH_LENGTH = 1024;
 
 void buildArgs(const std::string tokens[], int token_count, char* args[]) {
     for(size_t i=0; i<token_count; ++i) {
@@ -94,10 +99,71 @@ void splitCommand(const std::string &user_input, std::string &left, std::string 
     }
 }
 
+void executePipe(char* left_args[], char* right_args[]) {
+    int fd[2];
+
+    if(pipe(fd) == -1) {
+        perror("pipe");
+        return ;
+    }
+
+    pid_t pid1 = fork();
+
+    if(pid1 < 0) {
+        perror("Fork Failed");
+        close(fd[0]);
+        close(fd[1]);
+        return;
+    }
+
+    if(pid1 == 0) {
+        if (dup2(fd[1], STDOUT_FILENO) == -1) {
+            perror("dup2");
+            exit(1);
+        }
+        close(fd[0]);
+        close(fd[1]);
+        execvp(left_args[0], left_args);
+        perror("execvp failed");
+        exit(1);
+    }   
+
+    pid_t pid2 = fork();
+
+    if(pid2 < 0) {
+        perror("Fork Failed");
+        close(fd[0]);
+        close(fd[1]);
+        waitpid(pid1, NULL, 0);
+        return;
+    }
+
+    if(pid2 == 0) {
+        if (dup2(fd[0], STDIN_FILENO) == -1) {
+            perror("dup2");
+            exit(1);
+        }
+        close(fd[1]);
+        close(fd[0]);
+        execvp(right_args[0], right_args);
+        perror("execvp failed");
+        exit(1);
+    }
+
+    close(fd[0]);
+    close(fd[1]);
+
+    waitpid(pid1, NULL, 0);
+    waitpid(pid2, NULL, 0);
+}
+
 int main() {
     while(true) {
-        char buffer[1024];
-        getcwd(buffer, sizeof(buffer));
+        char buffer[MAX_PATH_LENGTH];
+        if(getcwd(buffer, sizeof(buffer)) == nullptr) {
+            perror("getcwd");
+            continue;
+        }
 
         std::cout << "prsh " << buffer << ">" << std::flush;
         std::string user_input;
@@ -108,24 +174,26 @@ int main() {
             std::string left = "", right = "";
             splitCommand(user_input, left, right);
 
-            std::string leftTokens[100], rightTokens[100];
+            std::string leftTokens[MAX_ARGS], rightTokens[MAX_ARGS];
             int leftTokenCount = tokenize(left, leftTokens);
             int rightTokenCount = tokenize(right, rightTokens);
 
-            char *left_args[100], *right_args[100];
-
+            char *left_args[MAX_ARGS], *right_args[MAX_ARGS];
+            
             buildArgs(leftTokens, leftTokenCount, left_args);
             buildArgs(rightTokens, rightTokenCount, right_args);
+
+            executePipe(left_args, right_args);
 
             cleanup(left_args, leftTokenCount);
             cleanup(right_args, rightTokenCount);
         } else {
-            std::string tokens[100];
+            std::string tokens[MAX_ARGS];
 
             int token_count = tokenize(user_input, tokens);
             if(token_count == 0) continue;
             
-            char *args[100];
+            char *args[MAX_ARGS];
             buildArgs(tokens, token_count, args);
 
             if(!executeBuiltin(args)) executeExternal(args);
