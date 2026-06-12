@@ -118,9 +118,11 @@ A pipe is an IPC (Inter-Process Communication) mechanism that allows data to flo
 ### Progress
 
 - Implemented output redirection (>)
+- Implemented append redirection (>>)
 - Added file creation using open()
 - Redirected stdout to files using dup2()
 - Added error handling for open() and dup2()
+- O_WRONLY, O_CREAT, O_APPEND, O_TRUNC
 
 ### Learned
 
