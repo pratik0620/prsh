@@ -7,6 +7,7 @@
 
 #include<unistd.h>
 #include<sys/wait.h>
+#include<fcntl.h>
 
 constexpr int MAX_ARGS = 100;
 constexpr int MAX_PATH_LENGTH = 1024;
@@ -157,6 +158,16 @@ void executePipe(char* left_args[], char* right_args[]) {
     waitpid(pid2, NULL, 0);
 }
 
+bool isRedirection(const std::string &user_input) {
+    int i=0;
+    while(i < user_input.size()) {
+        if(user_input[i] == '>')
+            return true;
+        i++;
+    }
+    return false;
+}
+
 int main() {
     while(true) {
         char buffer[MAX_PATH_LENGTH];
@@ -187,6 +198,50 @@ int main() {
 
             cleanup(left_args, leftTokenCount);
             cleanup(right_args, rightTokenCount);
+        } else if (isRedirection(user_input)) {
+            pid_t pid = fork();
+            
+            if(pid < 0) {
+                perror("Fork Failed");
+            } else if(pid == 0) {
+                std::string left = "", right = "";
+                int i=0;
+                while(user_input[i] != '>') {
+                    left += user_input[i++];
+                }
+                i++;
+                while(i < user_input.size()) {
+                    right += user_input[i++];
+                }
+
+                std::string leftTokens[MAX_ARGS], rightTokens[MAX_ARGS];
+                int leftTokenCount = tokenize(left, leftTokens);
+                int rightTokenCount = tokenize(right, rightTokens);
+
+                char *left_args[MAX_ARGS], *right_args[MAX_ARGS];
+                
+                buildArgs(leftTokens, leftTokenCount, left_args);
+                buildArgs(rightTokens, rightTokenCount, right_args);
+
+                int fd = open(right_args[0], O_WRONLY | O_CREAT | O_TRUNC, 0644);
+                if(fd == -1) {
+                    perror("open");
+                    exit(1);
+                }
+
+                if (dup2(fd, STDOUT_FILENO) == -1) {
+                    perror("dup2");
+                    exit(1);
+                }
+                close(fd);
+
+                execvp(left_args[0], left_args);
+                perror("execvp failed");
+                cleanup(left_args, leftTokenCount);
+                cleanup(right_args, rightTokenCount);
+                exit(1);
+            }
+            waitpid(pid, NULL, 0);
         } else {
             std::string tokens[MAX_ARGS];
 

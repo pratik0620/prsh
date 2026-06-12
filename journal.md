@@ -112,3 +112,17 @@ A pipe is an IPC (Inter-Process Communication) mechanism that allows data to flo
 6. Redirect stdin to pipe read end
 7. Execute right command
 8. Parent waits for both children
+
+## Day 7 - 12 June 2026
+
+### Progress
+
+- Implemented output redirection (>)
+- Added file creation using open()
+- Redirected stdout to files using dup2()
+- Added error handling for open() and dup2()
+
+### Learned
+
+- Used to open or create files.
+- Returns a file descriptor.
