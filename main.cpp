@@ -178,6 +178,26 @@ bool isAppendRedirection(const std::string &user_input) {
     return false;
 }
 
+bool isInputRedirection(const std::string &user_input) {
+    int i=0;
+    while(i < user_input.size()) {
+        if(user_input[i] == '<')
+            return true;
+        i++;
+    }
+    return false;
+}
+
+bool isHereDocument(const std::string &user_input) {
+    int i=0;
+    while(i < user_input.size()-1) {
+        if(user_input[i] == '<' && user_input[i+1] == '<')
+            return true;
+        i++;
+    }
+    return false;
+}
+
 int main() {
     while(true) {
         char buffer[MAX_PATH_LENGTH];
@@ -295,6 +315,102 @@ int main() {
                 cleanup(right_args, rightTokenCount);
                 exit(1);
             } 
+            waitpid(pid, NULL, 0);
+        } else if (isHereDocument(user_input)) {
+            int fd[2];
+
+            if(pipe(fd) == -1) {
+                perror("pipe");
+                exit(1);
+            }
+
+            size_t pos = user_input.find("<<");
+
+            std::string left = user_input.substr(0, pos);
+            std::string right = user_input.substr(pos + 2);
+
+            std::string leftTokens[MAX_ARGS];
+            int leftTokenCount = tokenize(left, leftTokens);
+            char *left_args[MAX_ARGS];
+            buildArgs(leftTokens, leftTokenCount, left_args);
+
+            std::string input ;
+            while(true) {
+                std::getline(std::cin, input);
+                if(input == right) break;
+                input += '\n';
+                if (write(fd[1], input.c_str(), input.size()) == -1) {
+                    perror("write");
+                    exit(1);    
+                };
+            }
+
+            close(fd[1]);
+
+            pid_t pid = fork();
+             
+            if(pid < 0) {
+                perror("Fork Failed");
+                close(fd[0]);
+                exit(1);
+            } else if (pid == 0) {
+                if(dup2(fd[0], STDIN_FILENO) == -1) {
+                    perror("dup2");
+                    exit(1);
+                }
+                close(fd[0]);
+
+                execvp(left_args[0], left_args);
+                perror("execvp failed");
+                cleanup(left_args, leftTokenCount);
+                exit(1);
+            }
+            close(fd[0]);
+            cleanup(left_args, leftTokenCount);
+            waitpid(pid, NULL, 0);
+        } else if (isInputRedirection(user_input)) {
+            pid_t pid = fork();
+            
+            if(pid < 0) {
+                perror("Fork Failed");
+            } else if(pid == 0) {
+                std::string left = "", right = "";
+                int i=0;
+                while(user_input[i] != '<') {
+                    left += user_input[i++];
+                }
+                i++;
+                while(i < user_input.size()) {
+                    right += user_input[i++];
+                }
+
+                std::string leftTokens[MAX_ARGS], rightTokens[MAX_ARGS];
+                int leftTokenCount = tokenize(left, leftTokens);
+                int rightTokenCount = tokenize(right, rightTokens);
+
+                char *left_args[MAX_ARGS], *right_args[MAX_ARGS];
+                
+                buildArgs(leftTokens, leftTokenCount, left_args);
+                buildArgs(rightTokens, rightTokenCount, right_args);
+
+                int fd = open(right_args[0], O_RDONLY);
+                if(fd == -1) {
+                    perror("open");
+                    exit(1);
+                }
+
+                if (dup2(fd, STDIN_FILENO) == -1) {
+                    perror("dup2");
+                    exit(1);
+                }
+                close(fd);
+
+                execvp(left_args[0], left_args);
+                perror("execvp failed");
+                cleanup(left_args, leftTokenCount);
+                cleanup(right_args, rightTokenCount);
+                exit(1);
+            }
             waitpid(pid, NULL, 0);
         } else {
             std::string tokens[MAX_ARGS];

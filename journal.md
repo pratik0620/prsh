@@ -128,3 +128,14 @@ A pipe is an IPC (Inter-Process Communication) mechanism that allows data to flo
 
 - Used to open or create files.
 - Returns a file descriptor.
+
+## Day 8 - 13 June 2026
+
+### Progress
+
+- Implemented input redirection (<)
+- Implemented here document redirection (<<)
+
+### Learned
+
+- Redirecting file data as stdin using fd and dup2
