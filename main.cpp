@@ -12,6 +12,47 @@
 constexpr int MAX_ARGS = 100;
 constexpr int MAX_PATH_LENGTH = 1024;
 
+enum class CommandType {
+    NORMAL,
+    PIPE, 
+    OUTPUT_REDIRECT, 
+    APPEND_REDIRECT, 
+    INPUT_REDIRECT, 
+    HERE_DOC
+};
+
+enum class RedirectType {
+    OUTPUT,
+    APPEND,
+    INPUT
+};
+
+CommandType getCommandType(const std::string &input) {
+    if(input.find("|") != std::string::npos) return CommandType::PIPE;
+    if(input.find(">>") != std::string::npos) return CommandType::APPEND_REDIRECT;
+    if(input.find("<<") != std::string::npos) return CommandType::HERE_DOC;
+    if(input.find(">") != std::string::npos) return CommandType::OUTPUT_REDIRECT;
+    if(input.find("<") != std::string::npos) return CommandType::INPUT_REDIRECT;
+    return CommandType::NORMAL;
+};
+
+void trim(std::string &str) {
+    const std::string whitespace = " \t\n\r\f\v";
+    
+    size_t end = str.find_last_not_of(whitespace);
+    if (end != std::string::npos) {
+        str.erase(end + 1);
+    } else {
+        str.clear();
+        return;
+    }
+    
+    size_t start = str.find_first_not_of(whitespace);
+    if (start != std::string::npos) {
+        str.erase(0, start);
+    }
+}
+
 void buildArgs(const std::string tokens[], int token_count, char* args[]) {
     for(size_t i=0; i<token_count; ++i) {
         args[i] = new char[tokens[i].length() + 1];
@@ -43,6 +84,12 @@ int tokenize(const std::string &user_input, std::string tokens[]) {
 
 void cleanup(char* args[], int count){
     for(size_t i=0; i<count; ++i) delete[] args[i];
+}
+
+int buildCommandArgs(const std::string &command, std::string tokens[], char* args[]) {
+    int token_count = tokenize(command, tokens);
+    buildArgs(tokens, token_count, args);
+    return token_count;
 }
 
 void executeExternal(char* args[]) {
@@ -79,25 +126,45 @@ bool executeBuiltin(char* args[]) {
     return false;
 }
 
-bool isPipe(const std::string &user_input) {
-    int i=0;
-    while(i < user_input.size()) {
-        if(user_input[i] == '|')
-            return true;
-        i++;
-    }
-    return false;
-}
+void splitCommand(const std::string &user_input, std::string &left, std::string &right, CommandType type) {
+    size_t pos;
+    int offset = 0;
+    switch (type) {
+        case CommandType::PIPE:
+            pos = user_input.find("|");
+            offset = 1;
+            break;
 
-void splitCommand(const std::string &user_input, std::string &left, std::string &right) {
-    int i=0;
-    while(user_input[i] != '|') {
-        left += user_input[i++];
+        case CommandType::OUTPUT_REDIRECT:
+            pos = user_input.find(">");
+            offset = 1;
+            break;
+
+        case CommandType::APPEND_REDIRECT:
+            pos = user_input.find(">>");
+            offset = 2;
+            break;
+
+        case CommandType::INPUT_REDIRECT:
+            pos = user_input.find("<");
+            offset = 1;
+            break;
+        
+        case CommandType::HERE_DOC:
+            pos = user_input.find("<<");
+            offset = 2;
+            break;
+        
+        default:
+            std::cerr << "Invalid redirect type\n";
+            return;
     }
-    i++;
-    while(i < user_input.size()) {
-        right += user_input[i++];
-    }
+
+    left = user_input.substr(0, pos);
+    right = user_input.substr(pos + offset);
+
+    trim(left);
+    trim(right);
 }
 
 void executePipe(char* left_args[], char* right_args[]) {
@@ -158,44 +225,56 @@ void executePipe(char* left_args[], char* right_args[]) {
     waitpid(pid2, NULL, 0);
 }
 
-bool isOutputRedirection(const std::string &user_input) {
-    int i=0;
-    while(i < user_input.size()) {
-        if(user_input[i] == '>')
-            return true;
-        i++;
-    }
-    return false;
-}
+void executeRedirect(const std::string &user_input, RedirectType type, int open_flag, int target_fd) {
+    std::string left, right;
+    switch (type) {
+        case RedirectType::OUTPUT:
+            splitCommand(user_input, left, right, CommandType::OUTPUT_REDIRECT);
+            break;
 
-bool isAppendRedirection(const std::string &user_input) {
-    int i=0;
-    while(i < user_input.size()-1) {
-        if(user_input[i] == '>' && user_input[i+1] == '>')
-            return true;
-        i++;
-    }
-    return false;
-}
+        case RedirectType::APPEND:
+            splitCommand(user_input, left, right, CommandType::APPEND_REDIRECT);
+            break;
 
-bool isInputRedirection(const std::string &user_input) {
-    int i=0;
-    while(i < user_input.size()) {
-        if(user_input[i] == '<')
-            return true;
-        i++;
+        case RedirectType::INPUT:
+            splitCommand(user_input, left, right, CommandType::INPUT_REDIRECT);
+            break;
+        
+        default:
+            std::cerr << "Invalid redirect type\n";
+            return;
     }
-    return false;
-}
 
-bool isHereDocument(const std::string &user_input) {
-    int i=0;
-    while(i < user_input.size()-1) {
-        if(user_input[i] == '<' && user_input[i+1] == '<')
-            return true;
-        i++;
+    std::string leftTokens[MAX_ARGS];
+    char *left_args[MAX_ARGS];
+    int leftTokenCount = buildCommandArgs(left, leftTokens, left_args);
+
+    int fd = open(right.c_str(), open_flag, 0644);
+    if(fd == -1) {
+        perror("open");
+        cleanup(left_args, leftTokenCount);
+        return;
     }
-    return false;
+
+    pid_t pid = fork();
+            
+    if(pid < 0) {
+        perror("Fork Failed");
+    } else if(pid == 0) {
+        if (dup2(fd, target_fd) == -1) {
+            perror("dup2");
+            exit(1);
+        }
+        close(fd);
+
+        execvp(left_args[0], left_args);
+        perror("execvp failed");
+        cleanup(left_args, leftTokenCount);
+        exit(1);
+    } 
+    close(fd);
+    cleanup(left_args, leftTokenCount);
+    waitpid(pid, NULL, 0);
 }
 
 int main() {
@@ -211,112 +290,39 @@ int main() {
         std::getline(std::cin, user_input);
         if(user_input.empty()) continue;
 
-        if(isPipe(user_input)) {
+        CommandType command_type = getCommandType(user_input);
+
+        switch (command_type) {
+        case CommandType::PIPE: {
             std::string left = "", right = "";
-            splitCommand(user_input, left, right);
+            splitCommand(user_input, left, right, CommandType::PIPE);
 
             std::string leftTokens[MAX_ARGS], rightTokens[MAX_ARGS];
-            int leftTokenCount = tokenize(left, leftTokens);
-            int rightTokenCount = tokenize(right, rightTokens);
-
             char *left_args[MAX_ARGS], *right_args[MAX_ARGS];
             
-            buildArgs(leftTokens, leftTokenCount, left_args);
-            buildArgs(rightTokens, rightTokenCount, right_args);
+            int leftTokenCount = buildCommandArgs(left, leftTokens, left_args);
+            int rightTokenCount = buildCommandArgs(right, rightTokens, right_args);
 
             executePipe(left_args, right_args);
 
             cleanup(left_args, leftTokenCount);
             cleanup(right_args, rightTokenCount);
-        } else if (isAppendRedirection(user_input)) {
-            pid_t pid = fork();
-             
-            if(pid < 0) {
-                perror("Fork Failed");
-            } else if(pid == 0) {
-                std::string left = "", right = "";
-                int i=0;
-                while(user_input[i] != '>' && user_input[i+1] == '>') {
-                    left += user_input[i++];
-                }
-                i+=2;
-                while(i < user_input.size()) {
-                    right += user_input[i++];
-                }
+            break;
+        }
 
-                std::string leftTokens[MAX_ARGS], rightTokens[MAX_ARGS];
-                int leftTokenCount = tokenize(left, leftTokens);
-                int rightTokenCount = tokenize(right, rightTokens);
+        case CommandType::OUTPUT_REDIRECT:
+            executeRedirect(user_input, RedirectType::OUTPUT, O_WRONLY | O_CREAT | O_TRUNC, STDOUT_FILENO);
+            break;
 
-                char *left_args[MAX_ARGS], *right_args[MAX_ARGS];
-                
-                buildArgs(leftTokens, leftTokenCount, left_args);
-                buildArgs(rightTokens, rightTokenCount, right_args);
+        case CommandType::APPEND_REDIRECT:
+            executeRedirect(user_input, RedirectType::APPEND, O_WRONLY | O_CREAT | O_APPEND, STDOUT_FILENO);
+            break;
 
-                int fd = open(right_args[0], O_WRONLY | O_CREAT | O_APPEND, 0644);
-                if(fd == -1) {
-                    perror("open");
-                    exit(1);
-                }
+        case CommandType::INPUT_REDIRECT:
+            executeRedirect(user_input, RedirectType::INPUT, O_RDONLY, STDIN_FILENO);
+            break;
 
-                if (dup2(fd, STDOUT_FILENO) == -1) {
-                    perror("dup2");
-                    exit(1);
-                }
-                close(fd);
-
-                execvp(left_args[0], left_args);
-                perror("execvp failed");
-                cleanup(left_args, leftTokenCount);
-                cleanup(right_args, rightTokenCount);
-                exit(1);
-            } 
-            waitpid(pid, NULL, 0);
-        } else if (isOutputRedirection(user_input)) {
-            pid_t pid = fork();
-            
-            if(pid < 0) {
-                perror("Fork Failed");
-            } else if(pid == 0) {
-                std::string left = "", right = "";
-                int i=0;
-                while(user_input[i] != '>') {
-                    left += user_input[i++];
-                }
-                i++;
-                while(i < user_input.size()) {
-                    right += user_input[i++];
-                }
-
-                std::string leftTokens[MAX_ARGS], rightTokens[MAX_ARGS];
-                int leftTokenCount = tokenize(left, leftTokens);
-                int rightTokenCount = tokenize(right, rightTokens);
-
-                char *left_args[MAX_ARGS], *right_args[MAX_ARGS];
-                
-                buildArgs(leftTokens, leftTokenCount, left_args);
-                buildArgs(rightTokens, rightTokenCount, right_args);
-
-                int fd = open(right_args[0], O_WRONLY | O_CREAT | O_TRUNC, 0644);
-                if(fd == -1) {
-                    perror("open");
-                    exit(1);
-                }
-
-                if (dup2(fd, STDOUT_FILENO) == -1) {
-                    perror("dup2");
-                    exit(1);
-                }
-                close(fd);
-
-                execvp(left_args[0], left_args);
-                perror("execvp failed");
-                cleanup(left_args, leftTokenCount);
-                cleanup(right_args, rightTokenCount);
-                exit(1);
-            } 
-            waitpid(pid, NULL, 0);
-        } else if (isHereDocument(user_input)) {
+        case CommandType::HERE_DOC: {
             int fd[2];
 
             if(pipe(fd) == -1) {
@@ -324,15 +330,12 @@ int main() {
                 exit(1);
             }
 
-            size_t pos = user_input.find("<<");
-
-            std::string left = user_input.substr(0, pos);
-            std::string right = user_input.substr(pos + 2);
+            std::string left, right;
+            splitCommand(user_input, left, right, CommandType::HERE_DOC);
 
             std::string leftTokens[MAX_ARGS];
-            int leftTokenCount = tokenize(left, leftTokens);
             char *left_args[MAX_ARGS];
-            buildArgs(leftTokens, leftTokenCount, left_args);
+            int leftTokenCount = buildCommandArgs(left, leftTokens, left_args);
 
             std::string input ;
             while(true) {
@@ -368,61 +371,23 @@ int main() {
             close(fd[0]);
             cleanup(left_args, leftTokenCount);
             waitpid(pid, NULL, 0);
-        } else if (isInputRedirection(user_input)) {
-            pid_t pid = fork();
-            
-            if(pid < 0) {
-                perror("Fork Failed");
-            } else if(pid == 0) {
-                std::string left = "", right = "";
-                int i=0;
-                while(user_input[i] != '<') {
-                    left += user_input[i++];
-                }
-                i++;
-                while(i < user_input.size()) {
-                    right += user_input[i++];
-                }
 
-                std::string leftTokens[MAX_ARGS], rightTokens[MAX_ARGS];
-                int leftTokenCount = tokenize(left, leftTokens);
-                int rightTokenCount = tokenize(right, rightTokens);
+            break;
+        }
 
-                char *left_args[MAX_ARGS], *right_args[MAX_ARGS];
-                
-                buildArgs(leftTokens, leftTokenCount, left_args);
-                buildArgs(rightTokens, rightTokenCount, right_args);
-
-                int fd = open(right_args[0], O_RDONLY);
-                if(fd == -1) {
-                    perror("open");
-                    exit(1);
-                }
-
-                if (dup2(fd, STDIN_FILENO) == -1) {
-                    perror("dup2");
-                    exit(1);
-                }
-                close(fd);
-
-                execvp(left_args[0], left_args);
-                perror("execvp failed");
-                cleanup(left_args, leftTokenCount);
-                cleanup(right_args, rightTokenCount);
-                exit(1);
-            }
-            waitpid(pid, NULL, 0);
-        } else {
-            std::string tokens[MAX_ARGS];
-
-            int token_count = tokenize(user_input, tokens);
-            if(token_count == 0) continue;
-            
+        case CommandType::NORMAL: {
+            std::string tokens[MAX_ARGS];            
             char *args[MAX_ARGS];
-            buildArgs(tokens, token_count, args);
+            int token_count = buildCommandArgs(user_input, tokens, args);
 
             if(!executeBuiltin(args)) executeExternal(args);
             cleanup(args, token_count);
+            
+            break;
+        }
+
+        default:
+            break;
         }
     }
 

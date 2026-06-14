@@ -139,3 +139,13 @@ A pipe is an IPC (Inter-Process Communication) mechanism that allows data to flo
 ### Learned
 
 - Redirecting file data as stdin using fd and dup2
+
+## Day 9 - 14 June 2026
+
+### Progress
+
+- Refactored command parsing using CommandType enum
+- Refactored redirection handling using RedirectType enum
+- Added shared splitCommand() helper for pipes and redirections
+- Added buildCommandArgs() helper to reduce duplicated parsing logic
+- Simplified main() by replacing multiple condition checks with a switch-based command dispatcher
