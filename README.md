@@ -113,7 +113,6 @@ getCommandType()
 
 ## Current Known Limitations
 
-- Supports only a single pipe.
 - No command history.
 - No tab completion.
 - No environment variable expansion.

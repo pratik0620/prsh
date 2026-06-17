@@ -178,7 +178,6 @@ void splitCommand(const std::string &user_input, std::string &left, std::string 
 std::vector<std::string> splitPipeCommand(const std::string &input) {
     std::string str;
     std::vector<std::string> commands;
-    int j=0;
     for(char ch : input) {
         if(ch == '|') {
             trim(str);
@@ -188,13 +187,13 @@ std::vector<std::string> splitPipeCommand(const std::string &input) {
             str += ch;
         }   
     }
+    trim(str);
     commands.push_back(str);
     return commands;
 }
 
 void executePipe(const std::vector<std::string> &commands) {
-    if(commands.empty()) return;;
-
+    if(commands.empty()) return;
     int N = commands.size();
 
     for(const auto &command : commands) {
@@ -223,6 +222,9 @@ void executePipe(const std::vector<std::string> &commands) {
             for(int i=0; i<N-1; i++) {
                 close(fd[i][0]);
                 close(fd[i][1]);
+            }
+            for(int k=0; k<i; k++) {
+                waitpid(pid[k], NULL, 0);
             }
             return;
         } else if (pid[i] == 0) {
@@ -328,7 +330,9 @@ int main() {
 
         std::cout << "prsh " << buffer << ">" << std::flush;
         std::string user_input;
-        std::getline(std::cin, user_input);
+        if (!std::getline(std::cin, user_input)) {
+            break;
+        }
         if(user_input.empty()) continue;
 
         CommandType command_type = getCommandType(user_input);
