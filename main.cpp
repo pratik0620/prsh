@@ -1,5 +1,8 @@
 #include<iostream>
 
+#include<array>
+#include<vector>
+
 #include<string>
 #include<cstring>
 
@@ -160,6 +163,11 @@ void splitCommand(const std::string &user_input, std::string &left, std::string 
             return;
     }
 
+    if (pos == std::string::npos) {
+        std::cerr << "Operator not found in input\n";
+        return;
+    }
+
     left = user_input.substr(0, pos);
     right = user_input.substr(pos + offset);
 
@@ -167,62 +175,95 @@ void splitCommand(const std::string &user_input, std::string &left, std::string 
     trim(right);
 }
 
-void executePipe(char* left_args[], char* right_args[]) {
-    int fd[2];
+std::vector<std::string> splitPipeCommand(const std::string &input) {
+    std::string str;
+    std::vector<std::string> commands;
+    int j=0;
+    for(char ch : input) {
+        if(ch == '|') {
+            trim(str);
+            commands.push_back(str);
+            str = "";
+        } else {
+            str += ch;
+        }   
+    }
+    commands.push_back(str);
+    return commands;
+}
 
-    if(pipe(fd) == -1) {
-        perror("pipe");
-        return ;
+void executePipe(const std::vector<std::string> &commands) {
+    if(commands.empty()) return;;
+
+    int N = commands.size();
+
+    for(const auto &command : commands) {
+        if(command.empty()) {
+            std::cerr << "syntax error near unexpected token '|'\n";
+            return;
+        }
     }
 
-    pid_t pid1 = fork();
+    std::vector<std::array<int, 2>> fd(N-1);
 
-    if(pid1 < 0) {
-        perror("Fork Failed");
-        close(fd[0]);
-        close(fd[1]);
-        return;
+    for(int i=0; i<N-1; i++) {
+        if(pipe(fd[i].data()) == -1) {
+            perror("pipe");
+            return ;
+        }
     }
 
-    if(pid1 == 0) {
-        if (dup2(fd[1], STDOUT_FILENO) == -1) {
-            perror("dup2");
+    std::vector<pid_t> pid(N);
+
+    for(int i=0; i<N; i++) {
+        pid[i] = fork();
+
+        if(pid[i] < 0) {
+            perror("Fork Failed");
+            for(int i=0; i<N-1; i++) {
+                close(fd[i][0]);
+                close(fd[i][1]);
+            }
+            return;
+        } else if (pid[i] == 0) {
+            if(i != 0) {
+                if (dup2(fd[i-1][0], STDIN_FILENO) == -1) {
+                    perror("dup2");
+                    exit(1);
+                }
+            }
+
+            if(i != N-1) {
+                if (dup2(fd[i][1], STDOUT_FILENO) == -1) {
+                    perror("dup2");
+                    exit(1);
+                }
+            }
+
+            for(int j=0; j<N-1; j++) {
+                close(fd[j][0]);
+                close(fd[j][1]);
+            }
+
+            std::string tokens[MAX_ARGS];            
+            char *args[MAX_ARGS];
+            int token_count = buildCommandArgs(commands[i], tokens, args);
+
+            execvp(args[0], args);
+            cleanup(args, token_count);
+            perror("execvp failed");
             exit(1);
         }
-        close(fd[0]);
-        close(fd[1]);
-        execvp(left_args[0], left_args);
-        perror("execvp failed");
-        exit(1);
-    }   
-
-    pid_t pid2 = fork();
-
-    if(pid2 < 0) {
-        perror("Fork Failed");
-        close(fd[0]);
-        close(fd[1]);
-        waitpid(pid1, NULL, 0);
-        return;
     }
 
-    if(pid2 == 0) {
-        if (dup2(fd[0], STDIN_FILENO) == -1) {
-            perror("dup2");
-            exit(1);
-        }
-        close(fd[1]);
-        close(fd[0]);
-        execvp(right_args[0], right_args);
-        perror("execvp failed");
-        exit(1);
+    for(int i=0; i<N-1; i++) {
+        close(fd[i][0]);
+        close(fd[i][1]);
     }
 
-    close(fd[0]);
-    close(fd[1]);
-
-    waitpid(pid1, NULL, 0);
-    waitpid(pid2, NULL, 0);
+    for(int i=0; i<N; i++) {
+        waitpid(pid[i], NULL, 0);
+    }
 }
 
 void executeRedirect(const std::string &user_input, RedirectType type, int open_flag, int target_fd) {
@@ -294,19 +335,8 @@ int main() {
 
         switch (command_type) {
         case CommandType::PIPE: {
-            std::string left = "", right = "";
-            splitCommand(user_input, left, right, CommandType::PIPE);
-
-            std::string leftTokens[MAX_ARGS], rightTokens[MAX_ARGS];
-            char *left_args[MAX_ARGS], *right_args[MAX_ARGS];
-            
-            int leftTokenCount = buildCommandArgs(left, leftTokens, left_args);
-            int rightTokenCount = buildCommandArgs(right, rightTokens, right_args);
-
-            executePipe(left_args, right_args);
-
-            cleanup(left_args, leftTokenCount);
-            cleanup(right_args, rightTokenCount);
+            std::vector<std::string> pipe_commands = splitPipeCommand(user_input);
+            executePipe(pipe_commands);
             break;
         }
 

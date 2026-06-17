@@ -10,7 +10,7 @@ prsh is a Unix shell built from scratch in C++ as a learning project to understa
   - cd
   - clear
   - exit
-- Single pipe (|) support
+- Multiple pipe (|) support
 - Input redirection (<)
 - Output redirection (>)
 - Append redirection (>>)

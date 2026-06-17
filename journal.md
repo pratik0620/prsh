@@ -149,3 +149,26 @@ A pipe is an IPC (Inter-Process Communication) mechanism that allows data to flo
 - Added shared splitCommand() helper for pipes and redirections
 - Added buildCommandArgs() helper to reduce duplicated parsing logic
 - Simplified main() by replacing multiple condition checks with a switch-based command dispatcher
+
+## Day 10 - 17 June 2026
+
+### Progress
+
+- Implemented Multiple pipes support
+
+### Learned
+
+- Communicating between multiple processes.
+- When not use dup2 for stdout and stdin
+
+#### How multiple pipes work
+
+- all the commands are stored into a vector separated by '|'
+- we require (N-1) pipes for executing N process.
+- we create (N-1) pipes
+- we create a vector to store the process_id
+- we loop through it
+- we fork process one by one
+- for every child process, we change the stdout to current fd and the stdin to the previous fd.
+- for first command, we don't change stdin and for last command we don't change stdout.
+- after the loop, all the pipes are closed and data is cleaned.
