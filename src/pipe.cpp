@@ -11,6 +11,7 @@
 #include "parser.h"
 #include "redirect.h"
 #include "types.h"
+#include "builtin.h"
 
 void executePipe(const std::vector<std::string> &commands) {
     if(commands.empty()) return;
@@ -113,8 +114,9 @@ void executePipe(const std::vector<std::string> &commands) {
             }
 
             int token_count = buildCommandArgs(command, tokens, args);
-            executeCommand(args);
+            if(!executeBuiltin(args)) executeCommand(args);
             cleanup(args, token_count);
+            exit(0);
         }
     }
 
