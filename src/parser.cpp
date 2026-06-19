@@ -30,50 +30,48 @@ void trim(std::string &str) {
     }
 }
 
-void splitCommand(const std::string &user_input, std::string &left, std::string &right, CommandType type) {
+std::vector<std::string> parseRedirect(const std::string &input, CommandType type) {
+    std::string command, file_name;
     size_t pos;
     int offset = 0;
     switch (type) {
-        case CommandType::PIPE:
-            pos = user_input.find("|");
-            offset = 1;
-            break;
-
         case CommandType::OUTPUT_REDIRECT:
-            pos = user_input.find(">");
+            pos = input.find(">");
             offset = 1;
             break;
 
         case CommandType::APPEND_REDIRECT:
-            pos = user_input.find(">>");
+            pos = input.find(">>");
             offset = 2;
             break;
 
         case CommandType::INPUT_REDIRECT:
-            pos = user_input.find("<");
+            pos = input.find("<");
             offset = 1;
             break;
         
         case CommandType::HERE_DOC:
-            pos = user_input.find("<<");
+            pos = input.find("<<");
             offset = 2;
             break;
         
         default:
             std::cerr << "Invalid redirect type\n";
-            return;
+            return {};
     }
 
     if (pos == std::string::npos) {
         std::cerr << "Operator not found in input\n";
-        return;
+        return {};
     }
 
-    left = user_input.substr(0, pos);
-    right = user_input.substr(pos + offset);
+    command = input.substr(0, pos);
+    file_name = input.substr(pos + offset);
 
-    trim(left);
-    trim(right);
+    trim(command);
+    trim(file_name);
+
+    return {command, file_name};
 }
 
 std::vector<std::string> splitPipeCommand(const std::string &input) {

@@ -6,7 +6,7 @@
 
 #include "types.h"
 
-void executeRedirect(const std::string &, RedirectType, int, int);
-void executeHereDoc(const std::string &, CommandType);
+std::vector<std::string> executeRedirect(const std::string &, RedirectType, int, int);
+std::vector<std::string> executeHereDoc(const std::string &, CommandType);
 
 #endif

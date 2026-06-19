@@ -2,10 +2,15 @@
 #include<vector>
 #include<array>
 #include<sys/wait.h>
+#include<fcntl.h>
 
 #include "pipe.h"
 #include "utils.h"
 #include "constants.h"
+#include "executor.h"
+#include "parser.h"
+#include "redirect.h"
+#include "types.h"
 
 void executePipe(const std::vector<std::string> &commands) {
     if(commands.empty()) return;
@@ -64,12 +69,52 @@ void executePipe(const std::vector<std::string> &commands) {
 
             std::string tokens[MAX_ARGS];            
             char *args[MAX_ARGS];
-            int token_count = buildCommandArgs(commands[i], tokens, args);
 
-            execvp(args[0], args);
+            std::string command = commands[i];
+
+            CommandType command_type = getCommandType(commands[i]);
+
+            std::vector<std::string> result;
+            switch (command_type) {
+                case CommandType::OUTPUT_REDIRECT:
+                    result = executeRedirect(commands[i], RedirectType::OUTPUT, O_WRONLY | O_CREAT | O_TRUNC, STDOUT_FILENO);
+                    if(result.empty()) {
+                        exit(1);
+                    }
+                    command = result[0];
+                    break;
+
+                case CommandType::APPEND_REDIRECT:
+                    result = executeRedirect(commands[i], RedirectType::APPEND, O_WRONLY | O_CREAT | O_APPEND, STDOUT_FILENO);
+                    if(result.empty()) {
+                        exit(1);
+                    }
+                    command = result[0];
+                    break;
+
+                case CommandType::INPUT_REDIRECT:
+                    result = executeRedirect(commands[i], RedirectType::INPUT, O_RDONLY, STDIN_FILENO);
+                    if(result.empty()) {
+                        exit(1);
+                    }
+                    command = result[0];
+                    break;
+
+                case CommandType::HERE_DOC:
+                    result = executeHereDoc(commands[i], CommandType::HERE_DOC);
+                    if(result.empty()) {
+                        exit(1);
+                    }
+                    command = result[0];
+                    break;
+
+                default:
+                    break;
+            }
+
+            int token_count = buildCommandArgs(command, tokens, args);
+            executeCommand(args);
             cleanup(args, token_count);
-            perror("execvp failed");
-            exit(1);
         }
     }
 

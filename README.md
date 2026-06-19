@@ -15,6 +15,7 @@ prsh is a Unix shell built from scratch in C++ as a learning project to understa
 - Output redirection (>)
 - Append redirection (>>)
 - Here documents (<<)
+- Pipes with redirection
 
 ## System Calls Used
 

@@ -172,3 +172,20 @@ A pipe is an IPC (Inter-Process Communication) mechanism that allows data to flo
 - for every child process, we change the stdout to current fd and the stdin to the previous fd.
 - for first command, we don't change stdin and for last command we don't change stdout.
 - after the loop, all the pipes are closed and data is cleaned.
+
+## Day 11 - 19 June 2026
+
+### Progress
+
+- Implement Pipes with redirection
+- Commands such as ls -a | grep cpp > out.txt now work correctly.
+- Refactored command execution so that pipes and redirections can be handled together.
+
+## Learned
+
+- A shell works by splitting user input.
+- First into commands by separating using (|).
+- Each pipe runs it own fork() to create a child process.
+- Pipes and redirections are not separate execution mechanisms. Both work by changing file descriptors using dup2().
+- For pipeline execution, the shell creates all required pipes, forks child processes, connects their standard input/output streams and finally executes the command using execvp().
+- Redirection (<, >, >>, <<) simply rewires a command's standard input or output before execution..
