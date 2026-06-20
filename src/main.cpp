@@ -9,8 +9,10 @@
 #include "builtin.h"
 #include "utils.h"
 #include "constants.h"
+#include "signal_handler.h"
 
 int main() {
+    handle_signal();
     while(true) {
         char buffer[MAX_PATH_LENGTH];
         if(getcwd(buffer, sizeof(buffer)) == nullptr) {
