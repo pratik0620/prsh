@@ -20,9 +20,15 @@ int main() {
             continue;
         }
 
+        if(g_interrupted) {
+            g_interrupted = 0;
+            continue;
+        }
+
         std::cout << "prsh " << buffer << ">" << std::flush;
         std::string user_input;
         if (!std::getline(std::cin, user_input)) {
+            std::cout << "exit" << std::endl;
             break;
         }
         if(user_input.empty()) continue;

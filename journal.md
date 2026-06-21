@@ -189,3 +189,25 @@ A pipe is an IPC (Inter-Process Communication) mechanism that allows data to flo
 - Pipes and redirections are not separate execution mechanisms. Both work by changing file descriptors using dup2().
 - For pipeline execution, the shell creates all required pipes, forks child processes, connects their standard input/output streams and finally executes the command using execvp().
 - Redirection (<, >, >>, <<) simply rewires a command's standard input or output before execution..
+
+## Day 12 - 21 June 2026
+
+## Progress
+
+- Added CTRL+C signal handling (SIGINT)
+- Added CTRL+D signal handling (eof)
+
+## Learned
+
+- sigaction() — allows a process to register custom behavior when a specific signal is received.
+- sa_handler — specifies the function that should execute when a signal arrives.
+- sa_flags — controls additional signal behavior such as SA_RESTART.
+- SIGINT — generated when the user presses Ctrl+C in the terminal.
+- sig_atomic_t — used to safely share state between a signal handler and the main program.
+- Signal handlers should only use async-signal-safe functions such as write().
+
+### Notes
+
+- The shell now survives Ctrl+C instead of terminating.
+- Child processes still receive Ctrl+C and terminate normally.
+- Ctrl+D exits the shell by detecting EOF from std::getline().

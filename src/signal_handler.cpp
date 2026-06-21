@@ -1,28 +1,23 @@
 #include<iostream>
 #include<signal.h>
+#include<unistd.h>
 
 #include "signal_handler.h"
 
-void handle_sigtstp(int sig) {
-    std::cout << "\nStopped Process" << std::endl;
-};
+volatile sig_atomic_t g_interrupted = 0;
 
-void handle_sigcont(int sig) {
-    std::cout << "\nRestart Process" << std::endl;
+void handle_sigint(int sig) {
+    g_interrupted = 1;
+    const char msg[] = "\n";
+    write(STDOUT_FILENO, msg, sizeof(msg) - 1);
 }
 
 void handle_signal() {
-    struct sigaction stop_sa{};
-    stop_sa.sa_handler = &handle_sigtstp;
-    stop_sa.sa_flags = SA_RESTART;
-    if (sigaction(SIGTSTP, &stop_sa, NULL) == -1) {
-        perror("sigaction");
-    }
-
-    struct sigaction cont_sa{};
-    cont_sa.sa_handler = &handle_sigcont;
-    cont_sa.sa_flags = SA_RESTART;
-    if (sigaction(SIGCONT, &cont_sa, NULL) == -1) {
+    struct sigaction int_sa{};
+    int_sa.sa_handler = &handle_sigint;
+    int_sa.sa_flags = SA_RESTART;
+    sigemptyset(&int_sa.sa_mask);
+    if (sigaction(SIGINT, &int_sa, NULL) == -1) {
         perror("sigaction");
     }
 }
