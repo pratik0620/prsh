@@ -62,6 +62,8 @@ int main() {
             continue;
         }
 
+        expandVariables(user_input);
+
         std::vector<std::string> commands = splitPipeCommand(user_input);
 
         if(commands.size() == 1) {

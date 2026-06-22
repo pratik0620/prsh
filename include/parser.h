@@ -11,6 +11,7 @@ void trim(std::string &);
 std::vector<std::string> parseRedirect(const std::string &, CommandType);
 std::vector<std::string> splitPipeCommand(const std::string &);
 bool parseBackgroundProcess(std::string &);
+void expandVariables(std::string &);
 
 int tokenize(const std::string &, std::string[]);
 

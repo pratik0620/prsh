@@ -1,6 +1,7 @@
 #include<iostream>
 #include <string>
 #include <vector>
+#include <regex>
 
 #include "parser.h"
 
@@ -122,4 +123,21 @@ bool parseBackgroundProcess(std::string &command) {
     }
 
     return false;
+}
+
+void expandVariables(std::string& input) {
+    static const std::regex re(R"(\$([A-Za-z_][A-Za-z0-9_]*))");
+    std::smatch match;
+
+    while (std::regex_search(input, match, re)) {
+        std::string var = match[1].str();
+
+        const char* value = getenv(var.c_str());
+
+        input.replace(
+            match.position(0),
+            match.length(0),
+            value ? value : ""
+        );
+    }
 }

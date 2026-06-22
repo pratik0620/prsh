@@ -2,7 +2,6 @@
 #include<cstring>
 #include<cstdlib>
 #include<unistd.h>
-#include<sys/wait.h>
 
 #include "builtin.h"
 #include "history.h"
@@ -39,6 +38,37 @@ bool executeBuiltin(char* args[]) {
         }
 
         return true;
+    } else if (strcmp(args[0], "export") == 0) {
+        if(args[1] == nullptr) {
+            std::cerr << "env variable not specified\n";
+            return true;
+        }
+        std::string var_name(args[1]);
+        size_t delimiter_pos = var_name.find('=');
+        if(delimiter_pos == std::string::npos) {
+            std::cerr << "'=' is not specified\n";
+            return true;
+        }
+        std::string env_var_name = var_name.substr(0,delimiter_pos);
+        std::string env_var_value = var_name.substr(delimiter_pos + 1);
+
+        if(setenv(env_var_name.c_str(), env_var_value.c_str(), 1) == 0) {
+            return true;
+        } else {
+            std::cerr << "Failed to set environment variable.\n";
+            return true;
+        }
+    } else if (strcmp(args[0], "unset") == 0) {
+        if(args[1] == nullptr) {
+            std::cerr << "env variable not specified\n";
+            return true;
+        }
+
+        if(unsetenv(args[1]) == 0) {
+            return true;
+        } else {
+            return true;
+        }
     }
     
     return false;

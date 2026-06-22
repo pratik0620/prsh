@@ -218,6 +218,7 @@ A pipe is an IPC (Inter-Process Communication) mechanism that allows data to flo
 
 - Add background job
 - Added zombie process cleanup using waitpid()
+- Add environment variables (export, unset)
 
 ### Learned
 
@@ -225,3 +226,5 @@ A pipe is an IPC (Inter-Process Communication) mechanism that allows data to flo
 - Since `waitpid()` is not called, the kernel marks the process as zombie process after it finished
 - `waitpid(-1, nullptr, WNOHANG)`, can be used to kill zombie process
 - Background processes require periodic cleanup to prevent zombie processes from accumulating.
+- `getenv()`, `setenv()`, `unsetenv()`
+- regex
