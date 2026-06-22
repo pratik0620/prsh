@@ -35,8 +35,12 @@ int main() {
         std::cout << "prsh " << buffer << "> " << std::flush;
         std::string user_input;
         if (!std::getline(std::cin, user_input)) {
+            if (g_interrupted) {
+                g_interrupted = 0;
+                std::cin.clear();
+                continue;
+            }   
             std::cout << "\nexit" << std::endl;
-            sleep(1);
             break;
         }
         if(user_input.empty()) continue;
@@ -56,11 +60,6 @@ int main() {
         appendHistory(user_input);
 
         bool background_process = parseBackgroundProcess(user_input);
-
-        if(user_input.empty() || user_input.find('&') != std::string::npos) {
-            std::cerr << "syntax error near unexpected token '&'\n";
-            continue;
-        }
 
         expandVariables(user_input);
 
