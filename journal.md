@@ -181,7 +181,7 @@ A pipe is an IPC (Inter-Process Communication) mechanism that allows data to flo
 - Commands such as ls -a | grep cpp > out.txt now work correctly.
 - Refactored command execution so that pipes and redirections can be handled together.
 
-## Learned
+### Learned
 
 - A shell works by splitting user input.
 - First into commands by separating using (|).
@@ -192,12 +192,12 @@ A pipe is an IPC (Inter-Process Communication) mechanism that allows data to flo
 
 ## Day 12 - 21 June 2026
 
-## Progress
+### Progress
 
 - Added CTRL+C signal handling (SIGINT)
 - Added CTRL+D signal handling (eof)
 
-## Learned
+### Learned
 
 - sigaction() — allows a process to register custom behavior when a specific signal is received.
 - sa_handler — specifies the function that should execute when a signal arrives.
@@ -206,8 +206,22 @@ A pipe is an IPC (Inter-Process Communication) mechanism that allows data to flo
 - sig_atomic_t — used to safely share state between a signal handler and the main program.
 - Signal handlers should only use async-signal-safe functions such as write().
 
-### Notes
+#### Notes
 
 - The shell now survives Ctrl+C instead of terminating.
 - Child processes still receive Ctrl+C and terminate normally.
 - Ctrl+D exits the shell by detecting EOF from std::getline().
+
+## Day 13 - 22 June 2026
+
+### Progress
+
+- Add background job
+- Added zombie process cleanup using waitpid()
+
+### Learned
+
+- For background jobs, shell does nor call `waitpid()`
+- Since `waitpid()` is not called, the kernel marks the process as zombie process after it finished
+- `waitpid(-1, nullptr, WNOHANG)`, can be used to kill zombie process
+- Background processes require periodic cleanup to prevent zombie processes from accumulating.

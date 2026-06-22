@@ -8,6 +8,7 @@
 
 bool executeBuiltin(char* args[]) {
     if(strcmp(args[0], "exit") == 0) {
+        std::cout << "\n";
         exit(0);
     } else if (strcmp(args[0], "cd") == 0) {
         if(args[1] == nullptr || strcmp(args[1], "~") == 0) {

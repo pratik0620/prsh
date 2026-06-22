@@ -111,3 +111,15 @@ int tokenize(const std::string &user_input, std::string tokens[]) {
     }
     return token_count;
 }
+
+bool parseBackgroundProcess(std::string &command) {
+    trim(command);
+
+    if(!command.empty() && command.back() == '&') {
+        command.pop_back();
+        trim(command);
+        return true;
+    }
+
+    return false;
+}

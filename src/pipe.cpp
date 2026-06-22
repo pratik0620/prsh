@@ -13,7 +13,7 @@
 #include "types.h"
 #include "builtin.h"
 
-void executePipe(const std::vector<std::string> &commands) {
+void executePipe(const std::vector<std::string> &commands, bool background) {
     if(commands.empty()) return;
     int N = commands.size();
 
@@ -120,12 +120,18 @@ void executePipe(const std::vector<std::string> &commands) {
         }
     }
 
+    if(background) {
+        std::cout << "[PID] " << pid[N-1] << std::endl;
+    }
+
     for(int i=0; i<N-1; i++) {
         close(fd[i][0]);
         close(fd[i][1]);
     }
 
     for(int i=0; i<N; i++) {
-        waitpid(pid[i], NULL, 0);
+        if(!background) {
+            waitpid(pid[i], NULL, 0);
+        }
     }
 }

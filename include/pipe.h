@@ -4,6 +4,6 @@
 #include <string>
 #include <vector>
 
-void executePipe(const std::vector<std::string> &);
+void executePipe(const std::vector<std::string> &, bool);
 
 #endif

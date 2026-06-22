@@ -14,6 +14,12 @@
 int main() {
     handle_signal();
     while(true) {
+
+        pid_t pid;
+        while((pid = waitpid(-1, nullptr, WNOHANG)) > 0) {
+            std::cout << "[PID " << pid << "]" << "\t" << "finished" << std::endl; 
+        }
+
         char buffer[MAX_PATH_LENGTH];
         if(getcwd(buffer, sizeof(buffer)) == nullptr) {
             perror("getcwd");
@@ -25,13 +31,21 @@ int main() {
             continue;
         }
 
-        std::cout << "prsh " << buffer << ">" << std::flush;
+        std::cout << "prsh " << buffer << "> " << std::flush;
         std::string user_input;
         if (!std::getline(std::cin, user_input)) {
-            std::cout << "exit" << std::endl;
+            std::cout << "\nexit" << std::endl;
+            sleep(1);
             break;
         }
         if(user_input.empty()) continue;
+
+        bool background_process = parseBackgroundProcess(user_input);
+
+        if(user_input.empty() || user_input.find('&') != std::string::npos) {
+            std::cerr << "syntax error near unexpected token '&'\n";
+            continue;
+        }
 
         std::vector<std::string> commands = splitPipeCommand(user_input);
 
@@ -42,12 +56,12 @@ int main() {
             int token_count = buildCommandArgs(commands[0], tokens, args);
 
             if(!executeBuiltin(args)) {
-                executePipe(commands);
+                executePipe(commands, background_process);
             }
 
             cleanup(args, token_count);
         } else {
-            executePipe(commands);
+            executePipe(commands, background_process);
         }
     }
 
