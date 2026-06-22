@@ -6,36 +6,24 @@ prsh is a Unix shell built from scratch in C++ as a learning project to understa
 
 - REPL Loop
 - Execute external commands using fork() and execvp()
-- Built-in Commands
-  - cd
-  - clear
-  - exit
-- Multiple pipe (|) support
-- Input redirection (<)
-- Output redirection (>)
-- Append redirection (>>)
-- Here documents (<<)
-- Pipes with redirection
+- Multiple pipe support (ls | grep .cpp | wc -l)
+- I/O Redirection: >, >>, <,
+- Pipes combined with redirection (ls | grep cpp > out.txt)
+- Background process execution (&)
+- Command history (!!, !n, !-n) persisted to ~/.prsh_history
+- Environment variable expansion ($VAR)
+- Built-in commands: cd, clear, exit, history, export, unset
 
 ## System Calls Used
 
-- fork()
-- execvp()
-- waitpid()
-- pipe()
-- dup2()
-- open()
-- close()
-- write()
-- chdir()
-- getcwd()
+fork(), execvp(), waitpid(), pipe(), dup2(), open(), close(), write(), chdir(), getcwd(), sigaction()
 
 ## Build and Run
 
 ```
 git clone https://github.com/pratik0620/prsh.git
 cd prsh
-g++ ./main.cpp -o ./prsh.exe
+g++ src/*.cpp -Iinclude -o main.exe
 ./prsh.exe
 ```
 
@@ -53,77 +41,57 @@ A shell felt like the perfect project because it sits at the boundary between us
 
 ## What I Learned
 
-#### Shell Parsing
+**Shell Parsing** - A simple shell also requires to parse user input into commands, arguments, pipes and redirection. I learned what actually happens before a command is actually executed
 
-A simple shell also requires to parse user input into commands, arguments, pipes and redirection. I learned what actually happens before a command is actually executed
+**Process creation** - We execute a command by creating a new process using fork(). This new process is the child of the main process, this child process executes the command while the parent process waits for the child to complete it's execution.
 
-#### Process creation
+**Program execution** - execvp() replaces the child process with a completely different program. This helped me understand why shells create a child process before executing commands.
 
-We execute a command by creating a new process using fork(). This new process is the child of the main process, this child process executes the command while the parent process waits for the child to complete it's execution.
+**File Descriptors** - Standard input, output and errors are represented using file descriptors. Redirection works by manipulating these descriptors with dup2() before executing a command.
 
-#### Program execution
+**Pipes and Communication between processes** - A pipe is a kernel buffer. N commands connected by pipes need N-1 pipes. Each child's stdout is wired to the next child's stdin using dup2(). The key insight: if you don't close unused pipe ends, the reading process hangs forever waiting for EOF that never comes.
 
-execvp() replaces the child process with a completely different program. This helped me understand why shells create a child process before executing commands.
-
-#### File Descriptors
-
-Standard input, output and errors are represented using file descriptors. Redirection works by manipulating these descriptors with dup2() before executing a command.
-
-#### Pipes and Communication between processes
-
-A pipe creates a path for communication between two processes. Where output of one command becomes the input of the other.
+**Signal Handling — SIGINT (Ctrl+C)** - SIGINT (Ctrl+C) must kill the foreground child but not the shell itself. The shell installs a custom handler that sets a flag, child processes reset to default handler before exec so they die normally on Ctrl+C.
 
 ## Architecture
 
 ```
-User Input
-    |
-    ▼
-getCommandType()
-    |
-    |── Built-in ---> executeBuiltin()
-    |
-    |── Normal ---> executeExternal()
-    |
-    |── Pipe ---> executePipe()
-    |
-    |── Redirect ---> executeRedirect()
+src/
+├── main.cpp
+├── parser.cpp
+├── pipe.cpp
+├── redirect.cpp
+├── builtin.cpp
+├── executor.cpp
+├── signal_handler.cpp
+├── history.cpp
+└── utils.cpp
 ```
 
-- `getCommandType()` — Takes the raw input string and detects what kind of command it is (pipe, redirection, or normal command) so the shell knows how to execute it.
+**Key functions:**
 
-- `trim()` — Removes leading and trailing whitespace from a string. Used after splitting commands to clean up tokens before execution.
-
-- `tokenize()` — Takes user input and splits it into an array of string tokens separated by spaces.
-
-- `buildArgs()` — Converts std::string tokens into a null-terminated C-style char\* array that execvp() requires.
-
-- `buildCommandArgs()` — Combines tokenize() and buildArgs() into a single helper to reduce repeated parsing logic across the codebase.
-
-- `executeExternal()` — Takes parsed args and executes an external program by forking a child process and replacing it with the target program using execvp(). Parent waits for the child to finish.
-
-- `executeBuiltin()` — Handles built-in commands (cd, clear, exit) that must run in the shell process itself rather than a child process.
-
-- `splitCommand()` — Splits any command string into left and right parts around an operator (|, >, >>, <, <<).
-
-- `executePipe()` — Creates a kernel pipe to connect two processes. Forks two children, wiring the stdout of the left command to the stdin of the right command using dup2().
-
-- `executeRedirect()` — Opens a file and rewires stdin or stdout to that file using dup2() before executing the command, implementing > , >>, and < in a single shared function.
-
-- `main()` — The REPL loop. Reads user input, determines command type via getCommandType(), and dispatches to the correct execute function via a switch statement.
+- `getCommandType()` — detects pipe, redirect, or normal command
+- `splitPipeCommand()` — splits input into N commands on |
+- `executePipe()` — creates N-1 pipes, forks N children, wires fds
+- `executeRedirect()` — opens file, rewires fd with dup2, returns command
+- `expandVariables()` — replaces $VAR with environment values
+- `expandHistory()` — resolves !!, !n, !-n from history file
 
 ## Current Known Limitations
 
-- No command history.
-- No tab completion.
-- No environment variable expansion.
-- No job control or background processes.
-- Limited support for quoted strings.
-- Basic parser without advanced shell syntax.
+- No arrow key navigation (requires termios/readline)
+- No tab completion
+- Single level of redirection per command
+- No quoted string support
+- Basic parser without full POSIX shell syntax
+
+## Changelog
+
+- [v2.0.0](docs/v2.0.0.md)
+- [v1.0.0](docs/v1.0.0.md)
 
 ## Future Plans
 
-- Multiple pipe support
-- Signal handling (Ctrl+C, Ctrl+Z)
-- Command history
-- Background jobs
+- Arrow key history navigation (termios)
+- Tab completion
+- Signal handling for Ctrl+Z (SIGTSTP)
