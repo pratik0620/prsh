@@ -10,6 +10,7 @@
 #include "utils.h"
 #include "constants.h"
 #include "signal_handler.h"
+#include "history.h"
 
 int main() {
     handle_signal();
@@ -39,6 +40,20 @@ int main() {
             break;
         }
         if(user_input.empty()) continue;
+
+        if(!user_input.empty() && user_input[0] == '!') {
+            std::string expanded = expandHistory(user_input);
+
+            if(expanded.empty()) {
+                std::cerr << "history: event not found\n";
+                continue;
+            }
+
+            std::cout << expanded << "\n";
+            user_input = expanded;
+        }
+
+        appendHistory(user_input);
 
         bool background_process = parseBackgroundProcess(user_input);
 
