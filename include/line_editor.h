@@ -4,6 +4,6 @@
 #include<string>
 
 std::string readLine(const std::string&);
-void refreshLine(const std::string& , const std::string&);
+void refreshLine(const std::string& , const std::string&, size_t);
 
 #endif

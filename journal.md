@@ -228,3 +228,42 @@ A pipe is an IPC (Inter-Process Communication) mechanism that allows data to flo
 - Background processes require periodic cleanup to prevent zombie processes from accumulating.
 - `getenv()`, `setenv()`, `unsetenv()`
 - regex
+
+## Day 14 - 27 June 2026
+
+### Progress
+
+- Add support for raw mode
+
+### Learned
+
+- Learned about terminal modes - raw mode and cannonical mode
+- In canonical mode, the terminal buffers user input and sends it to the program only after the Enter key is pressed
+- In raw mode, the terminal delivers each key press to the program immediately instead of waiting for Enter.
+- Since echo is disabled in raw mode, the program is responsible for displaying characters, handling backspace, arrow keys, and other editing features.
+- `termios.h` provides APIs to configure terminal behavior.
+- `termios.h` allows us to configure terminal attributes. Raw mode is achieved by modifying specific terminal flags (such as ICANON and ECHO) using tcgetattr() and tcsetattr().
+
+## Day 14 - 28 June 2026
+
+### Progress
+
+- Add ARROW_KEY navigation
+- History navigation using UP/DOWN arrow key
+- cursor movement using LEFT/RIGHT arrow key
+- Replaced `std::getline()` with a custom line editor using raw mode.
+
+### Learned
+
+- Arrow keys send ANSI escape sequences.
+  - Up: `ESC [A`
+  - Down: `ESC [B`
+  - Right: `ESC [C`
+  - Left: `ESC [D`
+- In raw mode, input is read one byte at a time, these escape sequences must be parsed to identify special keys.
+- `std::getline()` cannot support interactive editing because it only returns input after the Enter key is pressed. A custom line editor is required to process each key press immediately.
+- A line editor maintains two pieces of state:
+  - the input buffer, which stores the command being edited,
+  - the cursor position, which tracks where the next character should be inserted or deleted.
+- History navigation is implemented by maintaining a history index and replacing the current buffer with previous or next commands.
+- The terminal display and the internal input buffer must always remain synchronized. After modifying the buffer (history navigation, insertion, deletion), the current line is redrawn to reflect the updated state.

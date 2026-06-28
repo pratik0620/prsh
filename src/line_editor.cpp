@@ -11,6 +11,7 @@ std::string readLine(const std::string& prompt) {
     enableRawMode();
 
     std::string buffer;
+    size_t cursor_pos = 0;
 
     std::vector<std::string> history = readHistory();
     int historyIndex = history.size();
@@ -31,9 +32,10 @@ std::string readLine(const std::string& prompt) {
         }
 
         if (ch == BACKSPACE) {
-            if (!buffer.empty()) {
-                buffer.pop_back();
-                std::cout << "\b \b" << std::flush;
+            if (!buffer.empty() && cursor_pos > 0) {
+                buffer.erase(cursor_pos - 1, 1);
+                cursor_pos--;
+                refreshLine(prompt, buffer, cursor_pos);
             }
             continue;
         }
@@ -47,7 +49,8 @@ std::string readLine(const std::string& prompt) {
                         if(!history.empty() && historyIndex > 0) {
                             historyIndex--;
                             buffer = history[historyIndex];
-                            refreshLine(prompt, buffer);
+                            cursor_pos = buffer.size();
+                            refreshLine(prompt, buffer, cursor_pos);
                         }
                         break;
 
@@ -60,15 +63,23 @@ std::string readLine(const std::string& prompt) {
                             else {
                                 buffer = history[historyIndex];
                             }
-                            refreshLine(prompt, buffer);
+                            cursor_pos = buffer.size();
+                            refreshLine(prompt, buffer, cursor_pos);
                         }
                         break;
                         
-                        case 'C': 
-                        std::cout << "Arrow RIGHT Key detected\r\n"; 
+                        case 'C':
+                        if (cursor_pos < buffer.size()) {
+                            cursor_pos++;
+                            std::cout << "\033[C" << std::flush;
+                        }
                         break;
+
                         case 'D': 
-                        std::cout << "Arrow LEFT Key detected\r\n"; 
+                        if(cursor_pos > 0) {
+                            cursor_pos--;
+                            std::cout << "\033[D" << std::flush;
+                        }
                         break;
                     }
                 }
@@ -76,13 +87,23 @@ std::string readLine(const std::string& prompt) {
             continue;
         }
 
-        std::cout << ch << std::flush;
-        buffer += ch;
+        buffer.insert(cursor_pos, 1, ch);
+        cursor_pos++;
+
+        refreshLine(prompt, buffer, cursor_pos);
     }
 }
 
-void refreshLine(const std::string& prompt, const std::string& buffer) {
+void refreshLine(const std::string& prompt, const std::string& buffer, size_t cursor_pos) {
     write(STDOUT_FILENO, "\r\033[2K", 5);
 
     std::cout << prompt << buffer << std::flush;
+
+    size_t move_left = buffer.size() - cursor_pos;
+
+    while(move_left--) {
+        std::cout << "\033[D";
+    }
+
+    std::cout << std::flush;
 }
