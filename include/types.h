@@ -16,4 +16,14 @@ enum class RedirectType {
     INPUT
 };
 
+enum class Key {
+    CHARACTER,
+    ENTER,
+    BACKSPACE,
+    ARROW_UP,
+    ARROW_DOWN,
+    ARROW_RIGHT,
+    ARROW_LEFT
+};
+
 #endif

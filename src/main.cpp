@@ -11,6 +11,7 @@
 #include "constants.h"
 #include "signal_handler.h"
 #include "history.h"
+#include "line_editor.h"
 
 int main() {
     handle_signal();
@@ -27,22 +28,14 @@ int main() {
             continue;
         }
 
-        if(g_interrupted) {
-            g_interrupted = 0;
-            continue;
-        }
+        // if(g_interrupted) {
+        //     g_interrupted = 0;
+        //     continue;
+        // }
 
         std::cout << "prsh " << buffer << "> " << std::flush;
-        std::string user_input;
-        if (!std::getline(std::cin, user_input)) {
-            if (g_interrupted) {
-                g_interrupted = 0;
-                std::cin.clear();
-                continue;
-            }   
-            std::cout << "\nexit" << std::endl;
-            break;
-        }
+        std::string user_input = readLine();
+        
         if(user_input.empty()) continue;
 
         if(!user_input.empty() && user_input[0] == '!') {
