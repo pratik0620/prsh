@@ -28,13 +28,10 @@ int main() {
             continue;
         }
 
-        // if(g_interrupted) {
-        //     g_interrupted = 0;
-        //     continue;
-        // }
+        std::string prompt = std::string("prsh ") + buffer + "> ";
+        std::cout << prompt << std::flush;
 
-        std::cout << "prsh " << buffer << "> " << std::flush;
-        std::string user_input = readLine();
+        std::string user_input = readLine(prompt);
         
         if(user_input.empty()) continue;
 
