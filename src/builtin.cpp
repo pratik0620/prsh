@@ -8,6 +8,9 @@
 #include "executor.h"
 
 bool executeBuiltin(char* args[]) {
+    if (args[0] == nullptr) {
+        return true;
+    }
     if(strcmp(args[0], "exit") == 0) {
         std::cout << "\n";
         exit(0);
@@ -21,7 +24,7 @@ bool executeBuiltin(char* args[]) {
         }
         return true; 
     } else if (strcmp(args[0], "clear") == 0) {
-        std::cout << "\033[2J\033[H";
+        std::cout << "\033[2J\033[H" << std::flush;
         return true;
     } else if (strcmp(args[0], "history") == 0) {
         if(args[1]) {
@@ -31,7 +34,7 @@ bool executeBuiltin(char* args[]) {
             }
         }
 
-        std::vector<std::string> history = readHistory();
+        const auto& history = getHistory();
 
         for(size_t i = 0; i < history.size(); i++) {
             std::cout << i + 1 << " " << history[i] << "\n";
@@ -52,23 +55,20 @@ bool executeBuiltin(char* args[]) {
         std::string env_var_name = var_name.substr(0,delimiter_pos);
         std::string env_var_value = var_name.substr(delimiter_pos + 1);
 
-        if(setenv(env_var_name.c_str(), env_var_value.c_str(), 1) == 0) {
-            return true;
-        } else {
-            std::cerr << "Failed to set environment variable.\n";
-            return true;
+        if (setenv(env_var_name.c_str(), env_var_value.c_str(), 1) != 0) {
+            perror("setenv");
         }
+        return true;
     } else if (strcmp(args[0], "unset") == 0) {
         if(args[1] == nullptr) {
             std::cerr << "env variable not specified\n";
             return true;
         }
 
-        if(unsetenv(args[1]) == 0) {
-            return true;
-        } else {
-            return true;
+        if (unsetenv(args[1]) != 0) {
+            perror("unsetenv");
         }
+        return true;
     }
     
     return false;

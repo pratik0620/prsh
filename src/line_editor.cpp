@@ -13,8 +13,8 @@ std::string readLine(const std::string& prompt) {
     std::string buffer;
     size_t cursor_pos = 0;
 
-    std::vector<std::string> history = readHistory();
-    int historyIndex = history.size();
+    const auto& history = getHistory();
+    int historyIndex = static_cast<int>(history.size());
 
     while(true) {
         char ch;

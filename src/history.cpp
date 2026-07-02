@@ -1,7 +1,12 @@
 #include<iostream>
+#include <fstream>
+#include <string>
+#include <vector>
 
 #include "history.h"
 #include "constants.h"
+
+static std::vector<std::string> history;
 
 std::string getHistoryPath() {
     const char* home = getenv("HOME");
@@ -11,14 +16,14 @@ std::string getHistoryPath() {
     return std::string(home) + "/.prsh_history";
 }
 
-std::vector<std::string> readHistory() {
-    std::vector<std::string> history;
-    std::string history_path = getHistoryPath();
+void loadHistory() {
+    history.clear();
 
+    std::string history_path = getHistoryPath();
     std::ifstream file(history_path);
 
     if(!file) {
-        return history;
+        return;
     }
 
     std::string line;
@@ -26,10 +31,20 @@ std::vector<std::string> readHistory() {
         history.push_back(line);
     }
 
+    trimHistory();
+}
+
+const std::vector<std::string>& getHistory() {
     return history;
 }
 
-void appendHistory(const std::string & command) {
+void appendHistory(const std::string& command) {
+    history.push_back(command);
+    if (history.size() > MAX_HISTORY_SIZE) {
+        trimHistory();
+        return;
+    }
+
     std::string history_path = getHistoryPath();
 
     std::ofstream file(history_path, std::ios::app);
@@ -42,9 +57,7 @@ void appendHistory(const std::string & command) {
     file << command << '\n';
 }
 
-std::string expandHistory(std::string &input) {
-    std::vector<std::string> history = readHistory();
-
+std::string expandHistory(const std::string &input) {
     if(history.empty()) {
         return "";
     }
@@ -84,11 +97,10 @@ void clearHistory() {
     if(!file) {
         std::cerr << "Failed to clear history\n";
     }
+    history.clear();
 }
 
 void trimHistory() {
-    std::vector<std::string> history = readHistory();
-
     if(history.size() <= MAX_HISTORY_SIZE) {
         return;
     }
@@ -96,9 +108,14 @@ void trimHistory() {
     std::string history_path = getHistoryPath();
     std::ofstream file(history_path, std::ios::trunc);
 
-    size_t start = history.size() - MAX_HISTORY_SIZE;
-
-    for(size_t i = start; i<history.size(); i++) {
-        file << history[i] << "\n";
+    if (!file) {
+        std::cerr << "Failed to rewrite history file\n";
+        return;
     }
+
+    for (const auto& command : history) {
+        file << command << '\n';
+    }
+
+    history.erase(history.begin(), history.begin() + (history.size() - MAX_HISTORY_SIZE));
 }

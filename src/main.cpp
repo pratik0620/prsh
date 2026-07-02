@@ -14,6 +14,7 @@
 #include "line_editor.h"
 
 int main() {
+    loadHistory();
     handle_signal();
     while(true) {
 

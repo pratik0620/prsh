@@ -6,9 +6,11 @@
 #include<fstream>
 
 std::string getHistoryPath();
-std::vector<std::string> readHistory();
+void loadHistory();
+const std::vector<std::string>& getHistory();
 void appendHistory(const std::string &);
-std::string expandHistory(std::string &);
+std::string expandHistory(const std::string &);
 void clearHistory();
+void trimHistory();
 
 #endif
