@@ -1,13 +1,15 @@
 #include<iostream>
 #include<string>
 #include<unistd.h>
+#include<cerrno>
 
 #include "terminal.h"
 #include "line_editor.h"
 #include "constants.h"
 #include "history.h"
+#include "types.h"
 
-std::string readLine(const std::string& prompt) {
+ReadResult readLine(const std::string& prompt) {
     enableRawMode();
 
     std::string buffer;
@@ -20,15 +22,29 @@ std::string readLine(const std::string& prompt) {
         char ch;
         ssize_t n = read(STDIN_FILENO, &ch, 1);
 
-        if(n<=0) {
+        if(n == -1) {
+            if(errno == EINTR) {
+                disableRawMode();
+                return {ReadStatus::INTERRUPTED, ""};
+            }
+
+            perror("read");
             disableRawMode();
-            return "";
+            return {ReadStatus::INTERRUPTED, ""};
+        }
+
+        if(ch == CTRL_D) {
+            if(buffer.empty()) {
+                disableRawMode();
+                return {ReadStatus::END_OF_FILE, ""};
+            }
+            continue;
         }
 
         if(ch == '\n' || ch == '\r') {
             std::cout << "\n";
             disableRawMode();
-            return buffer;
+            return {ReadStatus::SUCCESS, buffer};
         }
 
         if (ch == BACKSPACE) {

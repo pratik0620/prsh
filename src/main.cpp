@@ -32,7 +32,21 @@ int main() {
         std::string prompt = std::string("prsh ") + buffer + "> ";
         std::cout << prompt << std::flush;
 
-        std::string user_input = readLine(prompt);
+        ReadResult result = readLine(prompt);
+
+        switch(result.status) {
+            case ReadStatus::SUCCESS:
+                break;
+
+            case ReadStatus::INTERRUPTED:
+                continue;
+
+            case ReadStatus::END_OF_FILE:
+                std::cout << "\nexit\n";
+                return 0;
+        }
+
+        std::string user_input = result.line;
         
         if(user_input.empty()) continue;
 

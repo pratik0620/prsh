@@ -2,8 +2,9 @@
 #define LINE_EDITOR_H
 
 #include<string>
+#include "types.h"
 
-std::string readLine(const std::string&);
+ReadResult readLine(const std::string&);
 void refreshLine(const std::string& , const std::string&, size_t);
 
 #endif

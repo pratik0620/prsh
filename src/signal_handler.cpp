@@ -20,4 +20,4 @@ void handle_signal() {
     if (sigaction(SIGINT, &int_sa, NULL) == -1) {
         perror("sigaction");
     }
-}
+}   

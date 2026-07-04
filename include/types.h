@@ -1,6 +1,8 @@
 #ifndef TYPES_H
 #define TYPES_H
 
+#include<string>
+
 enum class CommandType {
     NORMAL,
     PIPE,
@@ -24,6 +26,17 @@ enum class Key {
     ARROW_DOWN,
     ARROW_RIGHT,
     ARROW_LEFT
+};
+
+enum class ReadStatus {
+    SUCCESS,
+    INTERRUPTED,
+    END_OF_FILE
+};
+
+struct ReadResult {
+    ReadStatus status;
+    std::string line;
 };
 
 #endif
