@@ -49,6 +49,9 @@ void executePipe(const std::vector<std::string> &commands, bool background) {
             }
             return;
         } else if (pid[i] == 0) {
+            signal(SIGINT, SIG_DFL);
+            signal(SIGTSTP, SIG_DFL);
+            
             if(i != 0) {
                 if (dup2(fd[i-1][0], STDIN_FILENO) == -1) {
                     perror("dup2");
@@ -131,7 +134,12 @@ void executePipe(const std::vector<std::string> &commands, bool background) {
 
     for(int i=0; i<N; i++) {
         if(!background) {
-            waitpid(pid[i], NULL, 0);
+            int status;
+            waitpid(pid[i], &status, WUNTRACED);
+
+            if(WIFSTOPPED(status)) {
+                std::cout << "\n[PID " << pid[i] << "] stopped\n";
+            }
         }
     }
 }

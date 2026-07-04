@@ -17,7 +17,14 @@ void handle_signal() {
     int_sa.sa_handler = &handle_sigint;
     int_sa.sa_flags = 0;
     sigemptyset(&int_sa.sa_mask);
-    if (sigaction(SIGINT, &int_sa, NULL) == -1) {
+    if (sigaction(SIGINT, &int_sa, nullptr) == -1) {
+        perror("sigaction");
+    }
+
+    struct sigaction tstp_sa{};
+    tstp_sa.sa_handler = SIG_IGN;
+    sigemptyset(&tstp_sa.sa_mask);
+    if (sigaction(SIGTSTP, &tstp_sa, nullptr) == -1) {
         perror("sigaction");
     }
 }   
