@@ -6,6 +6,7 @@
 #include "builtin.h"
 #include "history.h"
 #include "executor.h"
+#include "jobs.h"
 
 bool executeBuiltin(char* args[]) {
     if (args[0] == nullptr) {
@@ -67,6 +68,14 @@ bool executeBuiltin(char* args[]) {
 
         if (unsetenv(args[1]) != 0) {
             perror("unsetenv");
+        }
+        return true;
+    } else if (strcmp(args[0], "jobs") == 0) {
+        const std::vector<Job>& jobs = getJobs();
+
+        size_t n = jobs.size();
+        for(size_t i=0; i<n; i++) {
+            std::cout << "[" << jobs[i].id << "]\t" << "[PID " << jobs[i].pid << "]\t" << jobStatusToString(jobs[i].status) << "\t" << jobs[i].command << '\n';
         }
         return true;
     }

@@ -12,6 +12,7 @@
 #include "redirect.h"
 #include "types.h"
 #include "builtin.h"
+#include "jobs.h"
 
 void executePipe(const std::vector<std::string> &commands, bool background) {
     if(commands.empty()) return;
@@ -138,6 +139,7 @@ void executePipe(const std::vector<std::string> &commands, bool background) {
             waitpid(pid[i], &status, WUNTRACED);
 
             if(WIFSTOPPED(status)) {
+                addJob(pid[i], commands[i]);
                 std::cout << "\n[PID " << pid[i] << "] stopped\n";
             }
         }
