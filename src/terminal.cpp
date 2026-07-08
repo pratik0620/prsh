@@ -8,6 +8,8 @@ struct termios original_settings;
 
 
 void enableRawMode() {
+    static bool registered = false;
+
     if (tcgetattr(STDIN_FILENO, &original_settings) == -1) {
         perror("tcgetattr");
         return;
@@ -25,7 +27,13 @@ void enableRawMode() {
         return;
     }
 
-    atexit(disableRawMode);
+    if(!registered) {
+        if (atexit(disableRawMode) == 0) {
+            registered = true;
+        } else {
+            perror("atexit");
+        }
+    }
 }
 
 void disableRawMode() {

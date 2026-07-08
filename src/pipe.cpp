@@ -136,7 +136,10 @@ void executePipe(const std::vector<std::string> &commands, bool background) {
     for(int i=0; i<N; i++) {
         if(!background) {
             int status;
-            waitpid(pid[i], &status, WUNTRACED);
+            if (waitpid(pid[i], &status, WUNTRACED) == -1) {
+                perror("waitpid");
+                continue;
+            }
 
             if(WIFSTOPPED(status)) {
                 addJob(pid[i], commands[i]);
