@@ -267,3 +267,54 @@ A pipe is an IPC (Inter-Process Communication) mechanism that allows data to flo
   - the cursor position, which tracks where the next character should be inserted or deleted.
 - History navigation is implemented by maintaining a history index and replacing the current buffer with previous or next commands.
 - The terminal display and the internal input buffer must always remain synchronized. After modifying the buffer (history navigation, insertion, deletion), the current line is redrawn to reflect the updated state.
+
+## Day 15 - 02 July 2026
+
+### Progress
+
+- Optimized history performanc by loading history once at startup.
+
+## Day 16 - 04 July 2026
+
+### Progress
+
+- Detected Ctrl+Z (SIGTSTP) for foreground processes.
+- Added support for detecting stopped child processes using waitpid() and WUNTRACED.
+
+### Learned
+
+- Learned that pressing Ctrl+Z sends the SIGTSTP (Terminal Stop Signal) to the foreground process.
+- Learned that child processes inherit the shell's signal handlers after fork(), making it necessary to restore the default signal behavior before calling execvp().
+- `waitpid()` only waits for child process termination. When `WUNTRACED` flag is passed, it allows it to tell if a process is stopped.
+- `WIFSTOPPED` tells is the process what suspended or terminated. (True->suspended, Fals->terminated).
+- Learned that signal dispositions are inherited by child processes after fork(), so child processes must restore the default handlers (SIG_DFL) before executing a new program.
+
+## Day 17 - 07 July 2026
+
+### Progress
+
+- Implemented job management subsystem.
+- Added jobs builtin command to list suspended/background jobs.
+
+### Learned
+
+- how Unix shells maintain a job table to keep track of processes running in the foreground and background.
+- why shells use a job ID separate from the operating system's PID, allowing users to refer to jobs using commands like fg, bg and jobs.
+
+## Day 18 - 08 July 2026
+
+### Progress
+
+- Implemented fg and bg built-in commands.
+- Added support for resuming suspended processes using SIGCONT.
+- Updated job states based on process execution and completion.
+
+### Learned
+
+- Learned that fg (foreground) resumes a suspended process and transfers its execution back to the foreground, causing the shell to wait until the process exits or is suspended again.
+- Learned that bg (background) resumes a suspended process without blocking the shell, allowing the user to continue executing other commands.
+- Learned that the SIGCONT signal is used to resume a process that has been stopped by SIGTSTP (Ctrl+Z).
+- how `waitpid()` is used in fg to wait for the resumed process, while bg resumes the process without waiting.
+- `WIFSTOPPED(status)` checks whether the child process was suspended by a signal such as `SIGTSTP`
+- `WIFEXITED(status)` checks whether the child process terminated normally, such as by returning from `main()` or calling `exit()`.
+- `WIFSIGNALED(status)` checks whether the child process terminated due to a signal, such as `SIGINT (Ctrl+C)` or `SIGKILL`.
