@@ -23,6 +23,7 @@ void addJob(pid_t, const std::string&);
 void removeJob(pid_t);
 const std::vector<Job>& getJobs();
 Job* findJob(int);
+Job* getLastStoppedJob();
 const char* jobStatusToString(JobStatus);
 
 #endif

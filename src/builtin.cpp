@@ -2,6 +2,8 @@
 #include<cstring>
 #include<cstdlib>
 #include<unistd.h>
+#include<signal.h>
+#include <sys/wait.h>
 
 #include "builtin.h"
 #include "history.h"
@@ -78,7 +80,62 @@ bool executeBuiltin(char* args[]) {
             std::cout << "[" << jobs[i].id << "]\t" << "[PID " << jobs[i].pid << "]\t" << jobStatusToString(jobs[i].status) << "\t" << jobs[i].command << '\n';
         }
         return true;
-    }
+    } else if (strcmp(args[0], "fg") == 0) {
+        Job* job;
+
+        if(args[1]) {
+            job = findJob(std::stoi(args[1]));
+        } else {
+            job = getLastStoppedJob();
+        }
+
+        if (job == nullptr) {
+            std::cerr << "fg: no such job\n";
+            return true;
+        }
+
+        std::cout << "[" << job->id << "] \t" << job->command << "\n";
+
+        pid_t pid = job->pid;
+        
+        kill(pid, SIGCONT);
+
+        job->status = JobStatus::RUNNING;
+
+        int status;
+        waitpid(pid, &status, WUNTRACED);
+
+        if(WIFEXITED(status) || WIFSIGNALED(status)) {
+            removeJob(pid);
+        } else if (WIFSTOPPED(status)) {
+            job->status = JobStatus::STOPPED;
+        }
+
+        return true;
+    } else if (strcmp(args[0], "bg") == 0) {
+        Job* job;
+
+        if(args[1]) {
+            job = findJob(std::stoi(args[1]));
+        } else {
+            job = getLastStoppedJob();
+        }
+
+        if (job == nullptr) {
+            std::cerr << "bg: no such job\n";
+            return true;
+        }
+
+        std::cout << "[" << job->id << "] \t" << job->command << " &\n";
+
+        pid_t pid = job->pid;
+        
+        kill(pid, SIGCONT);
+
+        job->status = JobStatus::RUNNING;
+
+        return true;
+    } 
     
     return false;
 }

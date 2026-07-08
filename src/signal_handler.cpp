@@ -27,4 +27,4 @@ void handle_signal() {
     if (sigaction(SIGTSTP, &tstp_sa, nullptr) == -1) {
         perror("sigaction");
     }
-}   
+}

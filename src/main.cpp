@@ -12,6 +12,7 @@
 #include "signal_handler.h"
 #include "history.h"
 #include "line_editor.h"
+#include "jobs.h"
 
 int main() {
     loadHistory();
@@ -20,6 +21,7 @@ int main() {
 
         pid_t pid;
         while((pid = waitpid(-1, nullptr, WNOHANG)) > 0) {
+            removeJob(pid);
             std::cout << "[PID " << pid << "]" << "\t" << "finished" << std::endl; 
         }
 

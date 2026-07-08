@@ -35,6 +35,16 @@ Job* findJob(int id) {
     return nullptr;
 }
 
+Job* getLastStoppedJob() {
+    int n = jobs.size();
+    for(int i=n-1; i>=0; i--) {
+        if(jobs[i].status == JobStatus::STOPPED) {
+            return &jobs[i];
+        }
+    }
+    return nullptr;
+}
+
 const char* jobStatusToString(JobStatus status) {
     switch (status) {
         case JobStatus::RUNNING:    return "Running";
