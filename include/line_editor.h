@@ -6,5 +6,6 @@
 
 ReadResult readLine(const std::string&);
 void refreshLine(const std::string& , const std::string&, size_t);
+Key readKey(char &);
 
 #endif

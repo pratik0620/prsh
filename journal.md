@@ -318,3 +318,10 @@ A pipe is an IPC (Inter-Process Communication) mechanism that allows data to flo
 - `WIFSTOPPED(status)` checks whether the child process was suspended by a signal such as `SIGTSTP`
 - `WIFEXITED(status)` checks whether the child process terminated normally, such as by returning from `main()` or calling `exit()`.
 - `WIFSIGNALED(status)` checks whether the child process terminated due to a signal, such as `SIGINT (Ctrl+C)` or `SIGKILL`.
+
+## Day 19 - 09 July 2026
+
+### Progress
+
+- Added Home, End, Del in line editor
+- Refactored code

@@ -20,93 +20,103 @@ ReadResult readLine(const std::string& prompt) {
 
     while(true) {
         char ch;
-        ssize_t n = read(STDIN_FILENO, &ch, 1);
+        Key key = readKey(ch);
 
-        if(n == -1) {
-            if(errno == EINTR) {
+        switch(key) {
+            case Key::CTRL_C:
                 disableRawMode();
                 return {ReadStatus::INTERRUPTED, ""};
-            }
 
-            perror("read");
-            disableRawMode();
-            return {ReadStatus::INTERRUPTED, ""};
-        }
-
-        if(ch == CTRL_D) {
-            if(buffer.empty()) {
+            case Key::ERROR:
                 disableRawMode();
-                return {ReadStatus::END_OF_FILE, ""};
-            }
-            continue;
-        }
+                return {ReadStatus::INTERRUPTED, ""};
 
-        if(ch == '\n' || ch == '\r') {
-            std::cout << "\n";
-            disableRawMode();
-            return {ReadStatus::SUCCESS, buffer};
-        }
-
-        if (ch == BACKSPACE) {
-            if (!buffer.empty() && cursor_pos > 0) {
-                buffer.erase(cursor_pos - 1, 1);
-                cursor_pos--;
-                refreshLine(prompt, buffer, cursor_pos);
-            }
-            continue;
-        }
-
-        if (ch == ESC) {
-            char seq[2];
-            if(read(STDIN_FILENO, &seq[0], 1) == 1 && read(STDIN_FILENO, &seq[1], 1) == 1) {
-                if (seq[0] == '[') {
-                    switch(seq[1]) {
-                        case 'A': 
-                        if(!history.empty() && historyIndex > 0) {
-                            historyIndex--;
-                            buffer = history[historyIndex];
-                            cursor_pos = buffer.size();
-                            refreshLine(prompt, buffer, cursor_pos);
-                        }
-                        break;
-
-                        case 'B': 
-                        if(historyIndex < history.size()) {
-                            historyIndex++;
-                            if (historyIndex == history.size()) {
-                                buffer.clear();
-                            }
-                            else {
-                                buffer = history[historyIndex];
-                            }
-                            cursor_pos = buffer.size();
-                            refreshLine(prompt, buffer, cursor_pos);
-                        }
-                        break;
-                        
-                        case 'C':
-                        if (cursor_pos < buffer.size()) {
-                            cursor_pos++;
-                            std::cout << "\033[C" << std::flush;
-                        }
-                        break;
-
-                        case 'D': 
-                        if(cursor_pos > 0) {
-                            cursor_pos--;
-                            std::cout << "\033[D" << std::flush;
-                        }
-                        break;
-                    }
+            case Key::CTRL_D:
+                if(buffer.empty()) {
+                    disableRawMode();
+                    return {ReadStatus::END_OF_FILE, ""};
                 }
-            }
-            continue;
+                break;
+
+            case Key::CHARACTER:
+                buffer.insert(cursor_pos, 1, ch);
+                cursor_pos++;
+                refreshLine(prompt, buffer, cursor_pos);
+                break;
+
+            case Key::BACKSPACE:
+                if (!buffer.empty() && cursor_pos > 0) {
+                    buffer.erase(cursor_pos - 1, 1);
+                    cursor_pos--;
+                    refreshLine(prompt, buffer, cursor_pos);
+                }
+                break;
+            
+            case Key::ENTER:
+                std::cout << '\n';
+                disableRawMode();
+                return {ReadStatus::SUCCESS, buffer};
+
+            case Key::ARROW_UP:
+                if(!history.empty() && historyIndex > 0) {
+                    historyIndex--;
+                    buffer = history[historyIndex];
+                    cursor_pos = buffer.size();
+                    refreshLine(prompt, buffer, cursor_pos);
+                }
+                break;
+
+            case Key::ARROW_DOWN:
+                if(historyIndex < history.size()) {
+                    historyIndex++;
+                    if (historyIndex == history.size()) {
+                        buffer.clear();
+                    }
+                    else {
+                        buffer = history[historyIndex];
+                    }
+                    cursor_pos = buffer.size();
+                    refreshLine(prompt, buffer, cursor_pos);
+                }
+                break;
+
+            case Key::ARROW_RIGHT:
+                if (cursor_pos < buffer.size()) {
+                    cursor_pos++;
+                    std::cout << "\033[C" << std::flush;
+                }
+                break;
+
+            case Key::ARROW_LEFT:
+                if(cursor_pos > 0) {
+                    cursor_pos--;
+                    std::cout << "\033[D" << std::flush;
+                }
+                break;
+
+            case Key::HOME:
+                cursor_pos = 0;
+                refreshLine(prompt, buffer, cursor_pos);
+                break;
+            
+            case Key::END:
+                cursor_pos = buffer.size();
+                refreshLine(prompt, buffer, cursor_pos);
+                break;
+            
+            case Key::DELETE_KEY:
+                if(cursor_pos < buffer.size()) {
+                    buffer.erase(cursor_pos, 1);
+                    refreshLine(prompt, buffer, cursor_pos);
+                }
+                break;
+
+            case Key::UNKNOWN:
+                break;
+            
+            default:
+                break;
         }
-
-        buffer.insert(cursor_pos, 1, ch);
-        cursor_pos++;
-
-        refreshLine(prompt, buffer, cursor_pos);
     }
 }
 
@@ -122,4 +132,55 @@ void refreshLine(const std::string& prompt, const std::string& buffer, size_t cu
     }
 
     std::cout << std::flush;
+}
+
+Key readKey(char &ch) {
+    ssize_t n = read(STDIN_FILENO, &ch, 1);
+
+    if(n == -1) {
+        if(errno == EINTR) {
+            return Key::CTRL_C;
+        }
+        perror("read");
+        return Key::ERROR;
+    }
+    
+    if (n == 0) {
+        return Key::CTRL_D;
+    }
+
+    switch(ch) {
+        case CTRL_D: return Key::CTRL_D;
+        case BACKSPACE: return Key::BACKSPACE;
+        case ENTER: return Key::ENTER;
+        case CARRIAGE_RETURN: return Key::ENTER;
+
+        case ESC: {
+            char seq[3];
+            if (read(STDIN_FILENO, &seq[0], 1) != 1)
+                return Key::UNKNOWN;
+
+            if (read(STDIN_FILENO, &seq[1], 1) != 1)
+                return Key::UNKNOWN;
+
+            if (seq[0] != '[')
+                return Key::UNKNOWN;
+
+            switch (seq[1]) {
+                case ARROW_UP: return Key::ARROW_UP;
+                case ARROW_DOWN: return Key::ARROW_DOWN;
+                case ARROW_RIGHT: return Key::ARROW_RIGHT;
+                case ARROW_LEFT: return Key::ARROW_LEFT;
+                case HOME_KEY: return Key::HOME;
+                case END_KEY: return Key::END;
+                case DEL_KEY:
+                    if (read(STDIN_FILENO, &seq[2], 1) == 1 &&
+                        seq[2] == '~')
+                        return Key::DELETE_KEY;
+                    return Key::UNKNOWN;
+            }
+            return Key::UNKNOWN;
+        }
+        default: return Key::CHARACTER;
+    }
 }

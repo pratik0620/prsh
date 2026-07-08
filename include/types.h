@@ -25,7 +25,14 @@ enum class Key {
     ARROW_UP,
     ARROW_DOWN,
     ARROW_RIGHT,
-    ARROW_LEFT
+    ARROW_LEFT,
+    HOME,
+    END,
+    DELETE_KEY,
+    CTRL_C,
+    CTRL_D,
+    UNKNOWN,
+    ERROR,
 };
 
 enum class ReadStatus {
