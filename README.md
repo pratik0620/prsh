@@ -6,25 +6,29 @@ prsh is a Unix shell built from scratch in C++ as a learning project to understa
 
 - REPL Loop
 - Execute external commands using fork() and execvp()
-- Multiple pipe support (ls | grep .cpp | wc -l)
-- I/O Redirection: >, >>, <,
-- Pipes combined with redirection (ls | grep cpp > out.txt)
+- Multiple pipe support (`ls | grep .cpp | wc -l`)
+- I/O Redirection: `>`, `>>`, `<`, `<<`
+- Pipes combined with redirection (`ls | grep cpp > out.txt`)
 - Background process execution (&)
-- Command history (!!, !n, !-n) persisted to ~/.prsh_history
+- Command history (`!!`, `!n`, `!-n`) persisted to ~/.prsh_history
 - Environment variable expansion ($VAR)
-- Built-in commands: cd, clear, exit, history, export, unset
+- Built-in commands: `cd`, `clear`, `exit`, `history`, `export`, `unset`, `fg`, `bg`, `jobs`
+- Arrow key navigation (↑↓ history, ← → cursor movement)
+- Home, End, Delete key support
+- Custom line editor using POSIX `termios` (no GNU Readline dependency)
+- Basic signal handling for SIGINT (Ctrl+C) and SIGTSTP (Ctrl+Z)
 
 ## System Calls Used
 
-fork(), execvp(), waitpid(), pipe(), dup2(), open(), close(), write(), chdir(), getcwd(), sigaction()
+fork(), execvp(), waitpid(), pipe(), dup2(), open(), close(), write(), chdir(), getcwd(), sigaction(), tcgetattr(), tcsetattr(), read(), kill()
 
 ## Build and Run
 
 ```
 git clone https://github.com/pratik0620/prsh.git
 cd prsh
-g++ src/*.cpp -Iinclude -o main.exe
-./prsh.exe
+g++ src/*.cpp -Iinclude -o prsh
+./prsh
 ```
 
 ## Why I Built This
@@ -53,6 +57,10 @@ A shell felt like the perfect project because it sits at the boundary between us
 
 **Signal Handling — SIGINT (Ctrl+C)** - SIGINT (Ctrl+C) must kill the foreground child but not the shell itself. The shell installs a custom handler that sets a flag, child processes reset to default handler before exec so they die normally on Ctrl+C.
 
+**Raw Terminal Mode** — Terminals operate in cooked mode by default — the OS buffers input and handles keys like backspace. Switching to raw mode via termios gives the shell direct access to every keystroke, making arrow keys and cursor movement possible without any external library.
+
+**Escape Sequences** — Arrow keys, Home, End and Delete are not single characters. They send multi-byte escape sequences (e.g. `\033[A` for up arrow). The shell must read and parse these sequences to respond correctly.
+
 ## Architecture
 
 ```
@@ -65,6 +73,9 @@ src/
 ├── executor.cpp
 ├── signal_handler.cpp
 ├── history.cpp
+├── line_editor.cpp
+├── terminal.cpp
+├── jobs.cpp
 └── utils.cpp
 ```
 
@@ -76,22 +87,26 @@ src/
 - `executeRedirect()` — opens file, rewires fd with dup2, returns command
 - `expandVariables()` — replaces $VAR with environment values
 - `expandHistory()` — resolves !!, !n, !-n from history file
+- `readKey()` — parses raw keystrokes and escape sequences
+- `readLine()` — line editor loop with history and cursor support
+- `refreshLine()` — redraws current input line using terminal escapes
 
 ## Current Known Limitations
 
-- No arrow key navigation (requires termios/readline)
 - No tab completion
 - Single level of redirection per command
 - No quoted string support
+- No POSIX process groups or terminal control (`setpgid`, `tcsetpgrp`)
 - Basic parser without full POSIX shell syntax
 
 ## Changelog
 
+- [v3.0.0](docs/v3.0.0.md)
 - [v2.0.0](docs/v2.0.0.md)
 - [v1.0.0](docs/v1.0.0.md)
 
 ## Future Plans
 
-- Arrow key history navigation (termios)
 - Tab completion
-- Signal handling for Ctrl+Z (SIGTSTP)
+- POSIX process groups and full terminal job control
+- Quoted string support
