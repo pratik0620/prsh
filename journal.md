@@ -244,7 +244,7 @@ A pipe is an IPC (Inter-Process Communication) mechanism that allows data to flo
 - `termios.h` provides APIs to configure terminal behavior.
 - `termios.h` allows us to configure terminal attributes. Raw mode is achieved by modifying specific terminal flags (such as ICANON and ECHO) using tcgetattr() and tcsetattr().
 
-## Day 14 - 28 June 2026
+## Day 15 - 28 June 2026
 
 ### Progress
 
@@ -268,13 +268,13 @@ A pipe is an IPC (Inter-Process Communication) mechanism that allows data to flo
 - History navigation is implemented by maintaining a history index and replacing the current buffer with previous or next commands.
 - The terminal display and the internal input buffer must always remain synchronized. After modifying the buffer (history navigation, insertion, deletion), the current line is redrawn to reflect the updated state.
 
-## Day 15 - 02 July 2026
+## Day 16 - 02 July 2026
 
 ### Progress
 
 - Optimized history performanc by loading history once at startup.
 
-## Day 16 - 04 July 2026
+## Day 17 - 04 July 2026
 
 ### Progress
 
@@ -289,7 +289,7 @@ A pipe is an IPC (Inter-Process Communication) mechanism that allows data to flo
 - `WIFSTOPPED` tells is the process what suspended or terminated. (True->suspended, Fals->terminated).
 - Learned that signal dispositions are inherited by child processes after fork(), so child processes must restore the default handlers (SIG_DFL) before executing a new program.
 
-## Day 17 - 07 July 2026
+## Day 18 - 07 July 2026
 
 ### Progress
 
@@ -301,7 +301,7 @@ A pipe is an IPC (Inter-Process Communication) mechanism that allows data to flo
 - how Unix shells maintain a job table to keep track of processes running in the foreground and background.
 - why shells use a job ID separate from the operating system's PID, allowing users to refer to jobs using commands like fg, bg and jobs.
 
-## Day 18 - 08 July 2026
+## Day 19 - 08 July 2026
 
 ### Progress
 
@@ -319,7 +319,7 @@ A pipe is an IPC (Inter-Process Communication) mechanism that allows data to flo
 - `WIFEXITED(status)` checks whether the child process terminated normally, such as by returning from `main()` or calling `exit()`.
 - `WIFSIGNALED(status)` checks whether the child process terminated due to a signal, such as `SIGINT (Ctrl+C)` or `SIGKILL`.
 
-## Day 19 - 09 July 2026
+## Day 20 - 09 July 2026
 
 ### Progress
 
