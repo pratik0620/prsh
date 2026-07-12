@@ -19,11 +19,12 @@ struct Job {
     JobStatus status;
 };
 
-void addJob(pid_t, const std::string&);
+void addJob(pid_t, const std::string&, JobStatus);
 void removeJob(pid_t);
 const std::vector<Job>& getJobs();
 Job* findJob(int);
 Job* getLastStoppedJob();
+Job* getLastJob();
 const char* jobStatusToString(JobStatus);
 
 #endif

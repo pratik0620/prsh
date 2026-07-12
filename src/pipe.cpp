@@ -125,6 +125,7 @@ void executePipe(const std::vector<std::string> &commands, bool background) {
     }
 
     if(background) {
+        addJob(pid[N-1], commands.back(), JobStatus::RUNNING);
         std::cout << "[PID] " << pid[N-1] << std::endl;
     }
 
@@ -142,7 +143,7 @@ void executePipe(const std::vector<std::string> &commands, bool background) {
             }
 
             if(WIFSTOPPED(status)) {
-                addJob(pid[i], commands[i]);
+                addJob(pid[i], commands[i], JobStatus::STOPPED);
                 std::cout << "\n[PID " << pid[i] << "] stopped\n";
             }
         }

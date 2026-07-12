@@ -4,6 +4,7 @@
 #include<unistd.h>
 #include<signal.h>
 #include <sys/wait.h>
+#include <cerrno>
 
 #include "builtin.h"
 #include "history.h"
@@ -86,7 +87,7 @@ bool executeBuiltin(char* args[]) {
         if(args[1]) {
             job = findJob(std::stoi(args[1]));
         } else {
-            job = getLastStoppedJob();
+            job = getLastJob();
         }
 
         if (job == nullptr) {
@@ -98,12 +99,22 @@ bool executeBuiltin(char* args[]) {
 
         pid_t pid = job->pid;
         
-        kill(pid, SIGCONT);
+        if(kill(pid, SIGCONT) == -1){
+            perror("kill");
+            removeJob(pid);
+            return true;
+        }
 
         job->status = JobStatus::RUNNING;
 
         int status;
-        waitpid(pid, &status, WUNTRACED);
+        while (waitpid(pid, &status, WUNTRACED) == -1) {
+            if (errno == EINTR) {
+                continue;
+            }
+            perror("waitpid");
+            return true;
+        }
 
         if(WIFEXITED(status) || WIFSIGNALED(status)) {
             removeJob(pid);
@@ -130,7 +141,11 @@ bool executeBuiltin(char* args[]) {
 
         pid_t pid = job->pid;
         
-        kill(pid, SIGCONT);
+        if(kill(pid, SIGCONT) == -1){
+            perror("kill");
+            removeJob(pid);
+            return true;
+        }
 
         job->status = JobStatus::RUNNING;
 

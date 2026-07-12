@@ -5,12 +5,12 @@
 std::vector<Job> jobs;
 static int nextJobId = 1;
 
-void addJob(pid_t pid, const std::string& command) {
+void addJob(pid_t pid, const std::string& command, JobStatus status) {
     Job job;
     job.id = nextJobId++;
     job.pid = pid;
     job.command = command;
-    job.status = JobStatus::STOPPED;
+    job.status = status;
 
     jobs.push_back(job);
 }
@@ -43,6 +43,14 @@ Job* getLastStoppedJob() {
         }
     }
     return nullptr;
+}
+
+Job* getLastJob() {
+    if (jobs.empty()) {
+        return nullptr;
+    }
+
+    return &jobs.back();
 }
 
 const char* jobStatusToString(JobStatus status) {
